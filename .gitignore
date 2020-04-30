@@ -1,0 +1,7 @@
+__pycache__
+gen
+build
+test_scripts
+vivado
+vunit_out
+*.gtkw

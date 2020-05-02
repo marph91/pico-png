@@ -246,7 +246,12 @@ begin
             slv_64_bit_buffer(int_current_index + v_int_bitwidth - 1 downto int_current_index) <=
               revert_vector(std_logic_vector(to_unsigned(v_int_code, v_int_bitwidth)));
 
-            state <= EXTRA_LENGTH_BITS;
+            -- will save one cycle in EXTRA_LENGTH_BITS for some cases
+            if v_int_match_length <= 10 or v_int_match_length = 285 then
+              state <= DISTANCE_CODE;
+            else
+              state <= EXTRA_LENGTH_BITS;
+            end if;
 
           when EXTRA_LENGTH_BITS =>
             v_int_match_length := to_integer(unsigned(
@@ -351,7 +356,12 @@ begin
               revert_vector(std_logic_vector(to_unsigned(v_int_code, 5)));
             int_current_index <= int_current_index + 5;
 
-            state <= EXTRA_DISTANCE_BITS;
+            -- will save one cycle in EXTRA_DISTANCE_BITS for some cases
+            if v_int_match_distance <= 4 then
+              state <= SEND_BYTES;
+            else
+              state <= EXTRA_DISTANCE_BITS;
+            end if;
 
           when EXTRA_DISTANCE_BITS =>
             v_int_match_distance := to_integer(unsigned(

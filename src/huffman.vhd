@@ -52,6 +52,16 @@ architecture behavioral of huffman is
     return v_slv_reverted;
   end;
 
+  procedure barrel_shifter(signal slv_buffer: inout std_logic_vector;
+                           slv_word: in std_logic_vector;
+                           signal int_index: inout integer) is
+  begin
+    slv_buffer(slv_buffer'HIGH downto slv_word'LENGTH) <=
+      slv_buffer(slv_buffer'HIGH - slv_word'LENGTH downto 0);
+    slv_buffer(slv_word'LENGTH-1 downto 0) <= slv_word;
+    int_index <= int_index + slv_word'LENGTH;
+  end;
+
 begin
   gen_huffman: if C_BTYPE = 0 generate
     -- 3.2.4. Non-compressed blocks (BTYPE=00)
@@ -145,8 +155,10 @@ begin
             sl_finish <= '0';
 
             -- send everything in one block
-            slv_64_bit_buffer(2 downto 0) <= std_logic_vector(to_unsigned(C_BTYPE, 2)) & '1'; -- BTYPE & BFINAL;
-            int_current_index <= 3;
+            barrel_shifter(
+              slv_64_bit_buffer,
+              revert_vector(std_logic_vector(to_unsigned(C_BTYPE, 2)) & '1'),
+              int_current_index);
 
             state <= WAIT_FOR_INPUT;
 
@@ -177,9 +189,10 @@ begin
               v_int_code := 256 + v_int_literal_value;
             end if;
 
-            slv_64_bit_buffer(int_current_index + v_int_bitwidth - 1 downto int_current_index) <=
-              revert_vector(std_logic_vector(to_unsigned(v_int_code, v_int_bitwidth)));
-            int_current_index <= int_current_index + v_int_bitwidth;
+            barrel_shifter(
+              slv_64_bit_buffer,
+              std_logic_vector(to_unsigned(v_int_code, v_int_bitwidth)),
+              int_current_index);
 
             state <= SEND_BYTES;
 
@@ -241,10 +254,11 @@ begin
             end if;
 
             report "LENGTH_CODE " & to_string(int_current_index) & " " & to_string(v_int_code);
-            int_current_index <= int_current_index + v_int_bitwidth;
             -- values get truncated on purpose
-            slv_64_bit_buffer(int_current_index + v_int_bitwidth - 1 downto int_current_index) <=
-              revert_vector(std_logic_vector(to_unsigned(v_int_code, v_int_bitwidth)));
+            barrel_shifter(
+              slv_64_bit_buffer,
+              std_logic_vector(to_unsigned(v_int_code, v_int_bitwidth)),
+              int_current_index);
 
             -- will save one cycle in EXTRA_LENGTH_BITS for some cases
             if v_int_match_length <= 10 or v_int_match_length = 285 then
@@ -279,12 +293,14 @@ begin
               assert false report "invalid length" & to_string(v_int_match_length);
             end if;
 
-            int_current_index <= int_current_index + v_int_bitwidth;
+            -- int_current_index <= int_current_index + v_int_bitwidth;
             report "EXTRA_LENGTH_BITS " & to_string(int_current_index) & " " & to_string(v_int_match_length) & " " & to_string(v_int_start_value);
             if v_int_bitwidth > 0 then
               -- values get truncated on purpose
-              slv_64_bit_buffer(int_current_index + v_int_bitwidth - 1 downto int_current_index) <=
-                revert_vector(std_logic_vector(to_unsigned(v_int_match_length - v_int_start_value, v_int_bitwidth)));
+              barrel_shifter(
+                slv_64_bit_buffer,
+                std_logic_vector(to_unsigned(v_int_match_length - v_int_start_value, v_int_bitwidth)),
+                int_current_index);
             end if;
             state <= DISTANCE_CODE;
 
@@ -352,9 +368,10 @@ begin
             end if;
 
             report "DISTANCE_CODE " & to_string(int_current_index) & " " & to_string(v_int_code);
-            slv_64_bit_buffer(int_current_index + 5 - 1 downto int_current_index) <=
-              revert_vector(std_logic_vector(to_unsigned(v_int_code, 5)));
-            int_current_index <= int_current_index + 5;
+            barrel_shifter(
+              slv_64_bit_buffer,
+              std_logic_vector(to_unsigned(v_int_code, 5)),
+              int_current_index);
 
             -- will save one cycle in EXTRA_DISTANCE_BITS for some cases
             if v_int_match_distance <= 4 then
@@ -414,10 +431,11 @@ begin
             end if;
 
             report "EXTRA_DISTANCE_BITS " & to_string(int_current_index) & " " & to_string(v_int_bitwidth) & " " & to_string(v_int_match_length) & " " & to_string(v_int_start_value);
-            int_current_index <= int_current_index + v_int_bitwidth;
             if v_int_bitwidth > 0 then
-              slv_64_bit_buffer(int_current_index + v_int_bitwidth - 1 downto int_current_index) <=
-                revert_vector(std_logic_vector(to_unsigned(v_int_match_distance - v_int_start_value, v_int_bitwidth)));
+              barrel_shifter(
+                slv_64_bit_buffer,
+                std_logic_vector(to_unsigned(v_int_match_distance - v_int_start_value, v_int_bitwidth)),
+                int_current_index);
             end if;
 
             state <= SEND_BYTES;
@@ -425,19 +443,25 @@ begin
           when SEND_BYTES =>
             if sl_flush_increment_index = '1' then
               -- append end of block -> eob is 7 bit zeros (256) -> zeros get appended anyway
-              int_current_index <= int_current_index + 7;
+              barrel_shifter(
+                slv_64_bit_buffer,
+                std_logic_vector(to_unsigned(0, 7)),
+                int_current_index);
               sl_flush_increment_index <= '0';
               sl_valid_out <= '0';
             elsif int_current_index >= 8 then
               sl_valid_out <= '1';
 
-              slv_data_out <= slv_64_bit_buffer(7 downto 0); -- TODO: send always all bytes (pad zeros always at end of block?)
-              slv_64_bit_buffer <= x"00" & slv_64_bit_buffer(63 downto 8);
+              slv_data_out <= revert_vector(slv_64_bit_buffer(int_current_index - 1 downto int_current_index - 8));
               int_current_index <= int_current_index - 8;
             elsif int_current_index > 0 and sl_flush = '1' then
               sl_valid_out <= '0';
-              int_current_index <= 8;
               sl_flush <= '0';
+              -- pad zeros (for full byte) at the end
+              barrel_shifter(
+                slv_64_bit_buffer,
+                std_logic_vector(to_unsigned(0, 8-int_current_index)),
+                int_current_index);
             else
               if sl_bfinal = '1' then
                 sl_bfinal <= '0';

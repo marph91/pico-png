@@ -22,7 +22,6 @@ entity deflate is
     oslv_data : out std_logic_vector(7 downto 0);
     osl_valid : out std_logic;
     osl_finish: out std_logic;
-    oint_valid_bits : out integer range 1 to 72;
     osl_rdy   : out std_logic
   );
 end;
@@ -79,7 +78,6 @@ begin
     oslv_data  => oslv_data,
     osl_valid  => osl_valid,
     osl_finish => osl_finish,
-    oint_valid_bits => oint_valid_bits,
     osl_rdy    => sl_rdy_huffman
   );
 

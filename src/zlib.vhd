@@ -49,7 +49,6 @@ architecture behavioral of zlib is
 
   signal sl_valid_deflate : std_logic := '0';
   signal slv_data_deflate : std_logic_vector(7 downto 0) := (others => '0');
-  signal int_valid_bits_deflate : integer range 1 to 72;
   signal sl_finish_deflate, sl_finish_deflate_save : std_logic := '0';
   signal sl_rdy_deflate : std_logic := '0';
 
@@ -79,7 +78,6 @@ begin
     oslv_data       => slv_data_deflate,
     osl_valid       => sl_valid_deflate,
     osl_finish      => sl_finish_deflate,
-    oint_valid_bits => int_valid_bits_deflate,
     osl_rdy         => sl_rdy_deflate
   );
 
@@ -121,13 +119,13 @@ begin
             sl_valid_out <= '0';
 
             -- sll needs more ressources
-            -- buffered_output <= buffered_output sll int_valid_bits_deflate;
-            buffered_output(buffered_output'HIGH downto int_valid_bits_deflate) <=
-              buffered_output(buffered_output'HIGH - int_valid_bits_deflate downto 0);
-            buffered_output(int_valid_bits_deflate-1 downto 0) <=
-              slv_data_deflate(slv_data_deflate'HIGH downto slv_data_deflate'HIGH - int_valid_bits_deflate + 1);
+            -- buffered_output <= buffered_output sll 8;
+            buffered_output(buffered_output'HIGH downto 8) <=
+              buffered_output(buffered_output'HIGH - 8 downto 0);
+            buffered_output(7 downto 0) <=
+              slv_data_deflate(slv_data_deflate'HIGH downto slv_data_deflate'HIGH - 8 + 1);
 
-            int_output_index <= int_output_index + int_valid_bits_deflate; -- not all bits of deflate output are used (the huffman output is variable)
+            int_output_index <= int_output_index + 8;
           elsif int_output_index >= 8 then
             sl_valid_out <= '1';
             slv_data_out <= buffered_output(int_output_index - 1 downto int_output_index - 8);
@@ -147,7 +145,7 @@ begin
             int_output_index <= int_output_index - 8;
           elsif int_output_index > 0 then
             -- fill the byte up with zeros
-            buffered_output(7 downto 0) <= buffered_output(7 downto 0) sll int_valid_bits_deflate;
+            buffered_output(7 downto 0) <= buffered_output(7 downto 0) sll 8;
             int_output_index <= 8;
             sl_valid_out <= '0';
           else

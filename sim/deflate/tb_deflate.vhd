@@ -34,7 +34,6 @@ architecture tb of tb_deflate is
   signal slv_data_in : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out : std_logic := '0';
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
-  signal int_valid_bits_out : integer;
   signal sl_rdy : std_logic := '0';
 
   shared variable data_src : array_t;
@@ -56,7 +55,6 @@ begin
     islv_data   => slv_data_in,
     oslv_data   => slv_data_out,
     osl_valid   => sl_valid_out,
-    oint_valid_bits => int_valid_bits_out,
     osl_rdy     => sl_rdy
   );
   

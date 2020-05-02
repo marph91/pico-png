@@ -18,7 +18,6 @@ entity huffman is
     oslv_data : out std_logic_vector(7 downto 0);
     osl_valid : out std_logic;
     osl_finish: out std_logic;
-    oint_valid_bits : out integer range 1 to 72;
     osl_rdy   : out std_logic
   );
 end;
@@ -496,6 +495,5 @@ begin
 
   oslv_data <= slv_data_out;
   osl_valid <= sl_valid_out;
-  oint_valid_bits <= 8;
   osl_finish <= sl_finish;
 end behavioral;

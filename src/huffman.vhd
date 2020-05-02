@@ -275,7 +275,8 @@ begin
               v_int_bitwidth,
               int_current_index);
 
-            -- will save one cycle in EXTRA_LENGTH_BITS for some cases
+            -- no extra bits for lengths <= 10
+            -- will save one cycle in EXTRA_LENGTH_BITS
             if v_int_match_length <= 10 or v_int_match_length = 285 then
               state <= DISTANCE_CODE;
             else
@@ -283,13 +284,7 @@ begin
             end if;
 
           when EXTRA_LENGTH_BITS =>
-            v_int_match_length := to_integer(unsigned(
-              slv_current_value(3 downto 0)));
-            -- TODO: switch case?
-            if v_int_match_length <= 10 or v_int_match_length = 285 then
-              -- no extra bits for lengths <= 10
-              v_int_bitwidth := 0;
-            elsif v_int_match_length <= 18 then
+            if v_int_match_length <= 18 then
               v_int_bitwidth := 1;
               v_int_start_value := 11;
             elsif v_int_match_length <= 34 then
@@ -308,16 +303,18 @@ begin
               assert false report "invalid length" & to_string(v_int_match_length);
             end if;
 
-            -- int_current_index <= int_current_index + v_int_bitwidth;
-            report "EXTRA_LENGTH_BITS " & to_string(int_current_index) & " " & to_string(v_int_match_length) & " " & to_string(v_int_start_value);
-            if v_int_bitwidth > 0 then
-              -- values get truncated on purpose
-              barrel_shifter(
-                slv_64_bit_buffer,
-                std_logic_vector(to_unsigned(v_int_match_length - v_int_start_value, 13)),
-                v_int_bitwidth,
-                int_current_index);
-            end if;
+            report "EXTRA_LENGTH_BITS " &
+              to_string(int_current_index) & " " &
+              to_string(v_int_match_length) & " " &
+              to_string(v_int_start_value);
+
+            -- values get truncated on purpose
+            barrel_shifter(
+              slv_64_bit_buffer,
+              std_logic_vector(to_unsigned(v_int_match_length - v_int_start_value, 13)),
+              v_int_bitwidth,
+              int_current_index);
+
             state <= DISTANCE_CODE;
 
           when DISTANCE_CODE =>
@@ -389,7 +386,8 @@ begin
               std_logic_vector(to_unsigned(v_int_code, 5)),
               int_current_index);
 
-            -- will save one cycle in EXTRA_DISTANCE_BITS for some cases
+            -- no extra bits for distance <= 4
+            -- will save one cycle in EXTRA_DISTANCE_BITS
             if v_int_match_distance <= 4 then
               state <= SEND_BYTES;
             else
@@ -397,13 +395,7 @@ begin
             end if;
 
           when EXTRA_DISTANCE_BITS =>
-            v_int_match_distance := to_integer(unsigned(
-              slv_current_value(islv_data'HIGH-1 downto 4)));
-            -- TODO: switch case?
-            if v_int_match_distance <= 4 then
-              -- no extra bits for distance <= 4
-              v_int_bitwidth := 0;
-            elsif v_int_match_distance <= 8 then
+            if v_int_match_distance <= 8 then
               v_int_bitwidth := 1;
               v_int_start_value := 5;
             elsif v_int_match_distance <= 16 then
@@ -446,14 +438,17 @@ begin
               assert false report "invalid distance" & to_string(v_int_match_distance);
             end if;
 
-            report "EXTRA_DISTANCE_BITS " & to_string(int_current_index) & " " & to_string(v_int_bitwidth) & " " & to_string(v_int_match_length) & " " & to_string(v_int_start_value);
-            if v_int_bitwidth > 0 then
-              barrel_shifter(
-                slv_64_bit_buffer,
-                std_logic_vector(to_unsigned(v_int_match_distance - v_int_start_value, 13)),
-                v_int_bitwidth,
-                int_current_index);
-            end if;
+            report "EXTRA_DISTANCE_BITS " &
+              to_string(int_current_index) & " " &
+              to_string(v_int_bitwidth) & " " &
+              to_string(v_int_match_length) & " " &
+              to_string(v_int_start_value);
+
+            barrel_shifter(
+              slv_64_bit_buffer,
+              std_logic_vector(to_unsigned(v_int_match_distance - v_int_start_value, 13)),
+              v_int_bitwidth,
+              int_current_index);
 
             state <= SEND_BYTES;
 

@@ -84,10 +84,6 @@ def assemble_and_check_png(root, input_data, name, width):
     for line in scanlines:
         reconstructed_data.extend(apply_filter(line))
 
-    # TODO: not needed anymore, could be removed
-    # to catch zlib errors, also check the image with pngcheck
-    # subprocess.run(["pngcheck", "-vv", join(root, "gen", f"test_img_{name}.png")], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
     print("input data:", input_data, list(input_data))
     print("reconstructed data:", reconstructed_data)
     return list(input_data) == reconstructed_data
@@ -107,17 +103,23 @@ def create_test_suite(ui):
         Case = namedtuple("Case", ["name", "input_buffer_size",
                                    "search_buffer_size", "data_in"])
         testcases = (
-            Case("no_compression", 10, 12,
+            Case("increment", 12, 12,
+                 [i % 256 for i in range(height*width)]),
+            Case("ones", 12, 12, [1 for _ in range(height*width)]),
+            Case("random", 12, 12,
                  [randint(0, 255) for _ in range(height * width)]),
         )
 
-        for case, row_filter in itertools.product(testcases, (0, 1)):
-            if row_filter != 0 and (height > 20 or width > 20):
-                # skip some test to save time
-                continue
+        # TODO: fix unequal input and search buffer size:
+        #       f. e. unittest.tb_png_encoder.ones_12x12_row_filter_1_btype_1
+        #             input buffer: 10, search buffer: 12 
+
+        for case, row_filter, btype in itertools.product(
+                testcases, (0, 1), (0, 1)):
             input_bytes = bytearray(case.data_in)
 
-            id_ = f"{case.name}_{width}x{height}_row_filter_{row_filter}"
+            id_ = (f"{case.name}_{width}x{height}_row_filter_{row_filter}"
+                   f"_btype_{btype}")
             generics = {
                 "id": id_,
                 "C_IMG_WIDTH": width,
@@ -125,7 +127,7 @@ def create_test_suite(ui):
                 "C_IMG_BIT_DEPTH": 8,
                 "C_INPUT_BUFFER_SIZE": case.input_buffer_size,
                 "C_SEARCH_BUFFER_SIZE": case.search_buffer_size,
-                "C_BTYPE": 0,
+                "C_BTYPE": btype,
                 "C_ROW_FILTER_TYPE": row_filter,
             }
             tb_deflate.add_config(

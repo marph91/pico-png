@@ -10,7 +10,8 @@ entity row_filter is
   generic (
     -- TODO: row filter type is allowed to change row wise -> signal
     C_ROW_FILTER_TYPE : integer range 0 to 4 := 1;
-    C_IMG_WIDTH : integer := 10
+    C_IMG_WIDTH : integer := 10;
+    C_IMG_HEIGHT : integer := 10
   );
   port (
     isl_clk   : in std_logic;
@@ -26,6 +27,7 @@ end;
 
 architecture behavioral of row_filter is
   signal int_column_cnt : integer range 0 to C_IMG_WIDTH-1 := 0;
+  signal int_row_cnt : integer range 0 to C_IMG_HEIGHT-1 := 0;
 
   signal isl_get_d1 : std_logic := '0';
   signal sl_valid_out : std_logic := '0';
@@ -44,6 +46,8 @@ begin
 
       case state is
         when IDLE =>
+          sl_valid_out <= '0';
+
           if isl_start = '1' then
             state <= SEND_FILTER_TYPE;
           end if;
@@ -81,9 +85,17 @@ begin
               int_column_cnt <= int_column_cnt + 1;
             else
               int_column_cnt <= 0;
-              state <= DELAY;
               sl_rdy <= '0';
-              int_delay <= 2;
+
+              if int_row_cnt < C_IMG_HEIGHT-1 then
+                state <= DELAY;
+                int_delay <= 2;
+
+                int_row_cnt <= int_row_cnt + 1;
+              else
+                state <= IDLE;
+                int_row_cnt <= 0;
+              end if;
             end if;
           end if;
 

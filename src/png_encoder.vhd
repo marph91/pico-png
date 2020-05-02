@@ -101,6 +101,7 @@ begin
   i_row_filter : entity png_lib.row_filter
   generic map (
     C_IMG_WIDTH => C_IMG_WIDTH,
+    C_IMG_HEIGHT => C_IMG_HEIGHT,
     C_ROW_FILTER_TYPE => C_ROW_FILTER_TYPE
   )
   port map (

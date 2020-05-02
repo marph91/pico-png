@@ -50,7 +50,7 @@ architecture behavioral of zlib is
   signal sl_valid_deflate : std_logic := '0';
   signal slv_data_deflate : std_logic_vector(7 downto 0) := (others => '0');
   signal int_valid_bits_deflate : integer range 1 to 72;
-  signal sl_finish_deflate : std_logic := '0';
+  signal sl_finish_deflate, sl_finish_deflate_save : std_logic := '0';
   signal sl_rdy_deflate : std_logic := '0';
 
   signal slv_data_adler32 : std_logic_vector(31 downto 0) := (others => '0');
@@ -59,8 +59,8 @@ architecture behavioral of zlib is
   signal state : t_states;
 
   -- bitbuffer
-  signal int_output_index : integer range 0 to 72 := 0;
-  signal buffered_output : std_logic_vector(71 downto 0) := (others => '0');
+  signal int_output_index : integer;-- TODO: range 0 to 72 := 0;
+  signal buffered_output : std_logic_vector(99 downto 0) := (others => '0');
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out : std_logic := '0';
 
@@ -100,6 +100,10 @@ begin
     if rising_edge(isl_clk) then
       osl_finish <= '0';
 
+      if sl_finish_deflate = '1' then
+        sl_finish_deflate_save <= '1';
+      end if;
+
       case state is
         when IDLE =>
           sl_valid_out <= '0';
@@ -114,6 +118,8 @@ begin
 
         when DEFLATE =>
           if sl_valid_deflate = '1' then
+            sl_valid_out <= '0';
+
             -- sll needs more ressources
             -- buffered_output <= buffered_output sll int_valid_bits_deflate;
             buffered_output(buffered_output'HIGH downto int_valid_bits_deflate) <=
@@ -126,12 +132,12 @@ begin
             sl_valid_out <= '1';
             slv_data_out <= buffered_output(int_output_index - 1 downto int_output_index - 8);
             int_output_index <= int_output_index - 8;
+          elsif sl_finish_deflate_save = '1' then
+            state <= FLUSH;
+            sl_valid_out <= '0';
+            sl_finish_deflate_save <= '0';
           else
             sl_valid_out <= '0';
-          end if;
-
-          if sl_finish_deflate = '1' then
-            state <= FLUSH;
           end if;
 
         when FLUSH =>

@@ -42,7 +42,7 @@ architecture behavioral of deflate is
   signal sl_valid_out : std_logic := '0';
 
 begin
-  gen_no_compression: if C_BTYPE = 0 generate
+  gen_compression: if C_BTYPE = 0 generate
     sl_finish_lzss <= isl_flush;
     sl_valid_out_lzss <= isl_valid;
     slv_data_out_lzss <= islv_data;
@@ -56,6 +56,7 @@ begin
     port map (
       isl_clk    => isl_clk,
       isl_flush  => isl_flush,
+      isl_get    => sl_rdy_huffman,
       isl_valid  => isl_valid,
       islv_data  => islv_data,
       oslv_data  => slv_data_out_lzss,
@@ -68,7 +69,7 @@ begin
   i_huffman : entity png_lib.huffman
   generic map (
     C_BTYPE => C_BTYPE,
-    C_BITWIDTH => 8
+    C_BITWIDTH => 8+9*C_BTYPE -- TODO: fix for C_BTYPE = 2
   )
   port map (
     isl_clk    => isl_clk,

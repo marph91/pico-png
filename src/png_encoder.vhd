@@ -1,4 +1,6 @@
--- https://zenhack.it/challenges/2017/05/30/pngcrc/
+-- http://www.libpng.org/pub/png/spec/iso/index-object.html
+-- https://www.ietf.org/rfc/rfc1950.txt
+-- https://www.ietf.org/rfc/rfc1951.txt
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -16,12 +18,19 @@ entity png_encoder is
     C_IMG_HEIGHT         : integer := 8;
     C_IMG_BIT_DEPTH      : integer := 8;
 
-    C_INPUT_BUFFER_SIZE  : integer range 3 to 258 := 10;
+    C_INPUT_BUFFER_SIZE  : integer range 3 to 258 := 12;
     C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
 
-    C_BTYPE              : integer range 0 to 3 := 0; -- 0: no huffman encoding
+    -- 0: no compression
+    -- 1: huffman encoding with a fixed table
+    -- 2: huffman encoding with a dynamic table (not suppored yet)
+    -- 3: not allowed
+    C_BTYPE              : integer range 0 to 3 := 1;
 
-    C_ROW_FILTER_TYPE    : integer range 0 to 5 := 0 -- 0: no filter is applied
+    -- 0: no filter
+    -- 1: sub filter (subtract the previous byte)
+    -- 2-5: not supported yet
+    C_ROW_FILTER_TYPE    : integer range 0 to 5 := 0
   );
   port (
     isl_clk    : in std_logic;

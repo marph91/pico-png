@@ -18,7 +18,6 @@ entity tb_deflate is
   generic (
     runner_cfg           : string;
     id                   : string;
-    data_ref             : string;
 
     C_INPUT_BUFFER_SIZE  : integer;
     C_SEARCH_BUFFER_SIZE : integer;

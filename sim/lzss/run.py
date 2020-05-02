@@ -1,7 +1,8 @@
+"""Test cases for the lzss implementation."""
+
 from collections import namedtuple
 import os
 from os.path import join, dirname
-from random import randint
 
 from vunit import VUnit
 
@@ -58,7 +59,7 @@ def create_test_suite(ui):
               encode_dict["u"] << 8,
               encode_dict["m"] << 8,
               encode_dict["."] << 8,
-              ]),
+             ]),
     ]
 
     for case in testcases:
@@ -71,7 +72,7 @@ def create_test_suite(ui):
         tb_lzss.add_config(
             name=case.name, generics=generics,
             pre_config=create_stimuli(root, case.name, case.data_in,
-                case.data_out))
+                                      case.data_out))
 
 
 if __name__ == "__main__":

@@ -1,4 +1,6 @@
 __pycache__
+.hdl_checker
+.mypy_cache
 gen
 build
 test_scripts

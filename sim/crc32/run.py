@@ -1,3 +1,5 @@
+"""Test cases for the crc32 implementation."""
+
 from collections import namedtuple
 import os
 from os.path import join, dirname
@@ -26,7 +28,7 @@ def generate_data(root, name, input_data):
         infile.write(", ".join(input_data_preprocessed))
 
     output_data = to_signed(zlib.crc32(b"".join(input_data)))
-    
+
     filename = join(root, "gen", "output_%s.csv" % name)
     with open(filename, "w") as outfile:
         outfile.write(str(output_data))
@@ -59,7 +61,7 @@ def create_test_suite(ui):
         Case("word_32_bit_input_8_bit_datums_4_IEND",
              [b"\x49", b"\x45", b"\x4e", b"\x44"]),
         Case("word_64_bit_input_64_bit_datums_1",
-             [b"".join([randint(0, 2** 64 - 1).to_bytes(8, "big")])]),
+             [b"".join([randint(0, 2 ** 64 - 1).to_bytes(8, "big")])]),
     )
 
     for case in testcases:

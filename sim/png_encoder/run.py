@@ -1,3 +1,5 @@
+"""Test cases for the png_encoder module."""
+
 from collections import namedtuple
 import functools
 import io
@@ -5,26 +7,12 @@ import itertools
 import os
 from os.path import join, dirname
 from random import randint
-import subprocess
 from typing import List
 import zlib
 
 from PIL import Image
 
 from vunit import VUnit
-
-
-def deflate(data):
-    compress = zlib.compressobj(
-        0,
-        zlib.DEFLATED,
-        -zlib.MAX_WBITS,
-        zlib.DEF_MEM_LEVEL,
-        0
-    )
-    deflated = compress.compress(data)
-    deflated += compress.flush()
-    return deflated
 
 
 def create_stimuli(root: str, name: str, input_data: List[int]):
@@ -112,7 +100,7 @@ def create_test_suite(ui):
 
         # TODO: fix unequal input and search buffer size:
         #       f. e. unittest.tb_png_encoder.ones_12x12_row_filter_1_btype_1
-        #             input buffer: 10, search buffer: 12 
+        #             input buffer: 10, search buffer: 12
 
         for case, row_filter, btype in itertools.product(
                 testcases, (0, 1), (0, 1)):

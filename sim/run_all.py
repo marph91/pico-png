@@ -10,6 +10,7 @@ from vunit import VUnit
 
 
 def create_test_suites(prj):
+    """Collect the test and run them."""
     root = os.path.dirname(__file__)
 
     prj.add_array_util()

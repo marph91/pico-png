@@ -1,3 +1,5 @@
+"""Test cases for the adler32 implementation."""
+
 from collections import namedtuple
 import os
 from os.path import join, dirname
@@ -26,7 +28,7 @@ def generate_data(root, name, input_data):
         infile.write(", ".join(input_data_preprocessed))
 
     output_data = to_signed(zlib.adler32(b"".join(input_data)))
-    
+
     filename = join(root, "gen", "output_%s.csv" % name)
     with open(filename, "w") as outfile:
         outfile.write(str(output_data))
@@ -58,7 +60,7 @@ def create_test_suite(ui):
         # TODO: sequential processing
         generics = {
             "id": case.name,
-            "C_INPUT_BITWIDTH": len(case.data_in[0])* 8
+            "C_INPUT_BITWIDTH": len(case.data_in[0]) * 8
         }
         tb_adler32.add_config(
             name=case.name, generics=generics,

@@ -1,13 +1,15 @@
+"""Test cases for the deflate module."""
+
 from collections import namedtuple
 import os
 from os.path import join, dirname
-from random import randint
 import zlib
 
 from vunit import VUnit
 
 
 def deflate(data):
+    """Deflate data."""
     compress = zlib.compressobj(
         0,
         zlib.DEFLATED,
@@ -27,7 +29,7 @@ def create_stimuli(root, name, input_data):
 
 
 def create_test_suite(ui):
-    return
+    return  # TODO: add test
     root = dirname(__file__)
     os.makedirs(join(root, "gen"), exist_ok=True)
 
@@ -36,7 +38,8 @@ def create_test_suite(ui):
     unittest.add_source_files(join(root, "tb_deflate.vhd"))
     tb_deflate = unittest.entity("tb_deflate")
 
-    Case = namedtuple("Case", ["name", "input_buffer_size", "search_buffer_size", "data_in"])
+    Case = namedtuple("Case", ["name", "input_buffer_size",
+                               "search_buffer_size", "data_in"])
     testcases = [
         Case("no_compression", 10, 12, [i for i in range(4)]),
     ]

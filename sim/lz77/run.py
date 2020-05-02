@@ -1,3 +1,5 @@
+"""Test cases for the lz77 implementation."""
+
 from collections import namedtuple
 import os
 from os.path import join, dirname
@@ -55,7 +57,7 @@ def create_test_suite(ui):
               encode_dict["e"],
               encode_dict["r"],
               (2 << 20) + (10 << 8) + encode_dict["."],
-              ]),
+             ]),
         Case("complex2", 10, 12,
              [0, 0, 2, 0, 0, 2, 0, 1, 2, 0, 1, 0, 0, 0, 2, 3],
              [0,
@@ -75,7 +77,7 @@ def create_test_suite(ui):
         tb_lz77.add_config(
             name=case.name, generics=generics,
             pre_config=create_stimuli(root, case.name, case.data_in,
-                case.data_out))
+                                      case.data_out))
 
 
 if __name__ == "__main__":

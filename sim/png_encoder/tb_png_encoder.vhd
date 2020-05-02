@@ -6,6 +6,7 @@ use ieee.numeric_std.all;
 library png_lib;
 library util;
 use util.math_pkg.all;
+use util.png_pkg.all;
 
 library sim;
 use sim.vunit_common_pkg.all;
@@ -22,6 +23,7 @@ entity tb_png_encoder is
     C_IMG_WIDTH          : integer;
     C_IMG_HEIGHT         : integer;
     C_IMG_BIT_DEPTH      : integer;
+    C_COLOR_TYPE         : integer;
 
     C_INPUT_BUFFER_SIZE  : integer;
     C_SEARCH_BUFFER_SIZE : integer;
@@ -52,6 +54,7 @@ begin
     C_IMG_WIDTH => C_IMG_WIDTH,
     C_IMG_HEIGHT => C_IMG_HEIGHT,
     C_IMG_BIT_DEPTH => C_IMG_BIT_DEPTH,
+    C_COLOR_TYPE => C_COLOR_TYPE,
 
     C_INPUT_BUFFER_SIZE => C_INPUT_BUFFER_SIZE,
     C_SEARCH_BUFFER_SIZE => C_SEARCH_BUFFER_SIZE,
@@ -78,7 +81,7 @@ begin
     test_runner_setup(runner, runner_cfg);
     data_src.load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
 
-    check_equal(data_src.width, C_IMG_WIDTH*C_IMG_HEIGHT*C_IMG_BIT_DEPTH/8);
+    check_equal(data_src.width, C_IMG_WIDTH*C_IMG_HEIGHT*get_img_depth(C_COLOR_TYPE)*C_IMG_BIT_DEPTH/8);
     check_equal(data_src.height, 1);
     check_equal(data_src.depth, 1);
 
@@ -102,6 +105,7 @@ begin
       slv_data_in <= std_logic_vector(to_unsigned(data_src.get(i, 0), slv_data_in'length));
       wait until rising_edge(sl_clk);
       sl_valid_in <= '0';
+      wait until rising_edge(sl_clk);
       wait until rising_edge(sl_clk);
     end loop;
 

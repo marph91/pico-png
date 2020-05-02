@@ -16,14 +16,25 @@ entity png_encoder is
   generic (
     C_IMG_WIDTH          : integer := 8;
     C_IMG_HEIGHT         : integer := 8;
-    C_IMG_BIT_DEPTH      : integer := 8;
+
+    -- allowed bit depths, depending on color type: 1, 2, 4, 8, 16
+    C_IMG_BIT_DEPTH      : integer range 1 to 16 := 8;
+
+    -- 0: greyscale
+    -- 1: invalid
+    -- 2: truecolor (not supported yet)
+    -- 3: indexed-color (not supported yet)
+    -- 4: greyscale with alpha (not supported yet)
+    -- 5: invalid
+    -- 6: truecolor with alpha (not supported yet)
+    C_COLOR_TYPE         : integer range 0 to 6 := 0;
 
     C_INPUT_BUFFER_SIZE  : integer range 3 to 258 := 12;
     C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
 
     -- 0: no compression
     -- 1: huffman encoding with a fixed table
-    -- 2: huffman encoding with a dynamic table (not suppored yet)
+    -- 2: huffman encoding with a dynamic table (not supported yet)
     -- 3: not allowed
     C_BTYPE              : integer range 0 to 3 := 1;
 
@@ -53,7 +64,7 @@ architecture behavioral of png_encoder is
     std_logic_vector(to_unsigned(C_IMG_WIDTH, 32)) &    -- width
     std_logic_vector(to_unsigned(C_IMG_HEIGHT, 32)) &   -- height
     std_logic_vector(to_unsigned(C_IMG_BIT_DEPTH, 8)) & -- bit depth
-    x"00" &                                             -- color type (grayscale)
+    std_logic_vector(to_unsigned(C_COLOR_TYPE, 8)) &    -- color type
     x"00" &                                             -- compression method (ONLY deflate/inflate compression with a 32K sliding window)
     x"00" &                                             -- filter method (ONLY adaptive filtering with five basic filter types)
     x"00";                                              -- interlace method (0: no interlace, 1: Adam7 interlace)
@@ -71,6 +82,8 @@ architecture behavioral of png_encoder is
 
   constant C_IEND_TYPE : std_logic_vector(4*8-1 downto 0) := x"49454e44"; -- IEND string encoded
   constant C_IEND : std_logic_vector(12*8-1 downto 0) := generate_chunk(C_IEND_TYPE, "");
+
+  constant C_IMG_DEPTH : integer range 1 to 4 := get_img_depth(C_COLOR_TYPE);
 
   -- other signals
   type t_states is (IDLE, INIT_IDAT_CRC32, HEADERS, INIT_ROW_FILTER, ZLIB, IDAT_CRC, IEND);
@@ -94,6 +107,7 @@ architecture behavioral of png_encoder is
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_finish : std_logic := '0';
 
+  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH := 0;
   signal int_pixel_cnt : integer range 0 to C_IMG_WIDTH*C_IMG_HEIGHT := 0;
   signal int_index : integer range 0 to 44 := 0;
 
@@ -111,6 +125,7 @@ begin
   generic map (
     C_IMG_WIDTH => C_IMG_WIDTH,
     C_IMG_HEIGHT => C_IMG_HEIGHT,
+    C_IMG_DEPTH => C_IMG_DEPTH,
     C_ROW_FILTER_TYPE => C_ROW_FILTER_TYPE
   )
   port map (
@@ -161,7 +176,12 @@ begin
       slv_data_in_crc32 <= slv_data_out_zlib;
 
       if isl_valid = '1' then
-        int_pixel_cnt <= int_pixel_cnt + 1;
+        if int_channel_cnt < C_IMG_DEPTH - 1 then
+          int_channel_cnt <= int_channel_cnt + 1;
+        else
+          int_channel_cnt <= 0;
+          int_pixel_cnt <= int_pixel_cnt + 1;
+        end if;
       end if;
 
       if sl_valid_out_zlib = '1' then

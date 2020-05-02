@@ -11,7 +11,8 @@ entity row_filter is
     -- TODO: row filter type is allowed to change row wise -> signal
     C_ROW_FILTER_TYPE : integer range 0 to 4 := 1;
     C_IMG_WIDTH : integer := 10;
-    C_IMG_HEIGHT : integer := 10
+    C_IMG_HEIGHT : integer := 10;
+    C_IMG_DEPTH : integer := 1
   );
   port (
     isl_clk   : in std_logic;
@@ -28,6 +29,7 @@ end;
 architecture behavioral of row_filter is
   signal int_column_cnt : integer range 0 to C_IMG_WIDTH-1 := 0;
   signal int_row_cnt : integer range 0 to C_IMG_HEIGHT-1 := 0;
+  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH-1 := 0;
 
   signal isl_get_d1 : std_logic := '0';
   signal sl_valid_out : std_logic := '0';
@@ -81,20 +83,25 @@ begin
           sl_rdy <= '1';
 
           if isl_valid = '1' then
-            if int_column_cnt < C_IMG_WIDTH-1 then
-              int_column_cnt <= int_column_cnt + 1;
+            if int_channel_cnt < C_IMG_DEPTH-1 then
+              int_channel_cnt <= int_channel_cnt + 1;
             else
-              int_column_cnt <= 0;
-              sl_rdy <= '0';
-
-              if int_row_cnt < C_IMG_HEIGHT-1 then
-                state <= DELAY;
-                int_delay <= 2;
-
-                int_row_cnt <= int_row_cnt + 1;
+              int_channel_cnt <= 0;
+              if int_column_cnt < C_IMG_WIDTH-1 then
+                int_column_cnt <= int_column_cnt + 1;
               else
-                state <= IDLE;
-                int_row_cnt <= 0;
+                int_column_cnt <= 0;
+                sl_rdy <= '0';
+
+                if int_row_cnt < C_IMG_HEIGHT-1 then
+                  state <= DELAY;
+                  int_delay <= 2;
+
+                  int_row_cnt <= int_row_cnt + 1;
+                else
+                  state <= IDLE;
+                  int_row_cnt <= 0;
+                end if;
               end if;
             end if;
           end if;

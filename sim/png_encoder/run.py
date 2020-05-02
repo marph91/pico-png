@@ -40,7 +40,7 @@ def apply_filter(data: bytes) -> List[int]:
 
 
 # TODO: use getfullargspec() API to allow type annotations
-def assemble_and_check_png(root, input_data, name, width):
+def assemble_and_check_png(root, input_data, name, width, depth):
     with open(join(root, "gen", f"png_{name}.txt"), "r") as infile:
         binary_strings = infile.readlines()
 
@@ -67,7 +67,8 @@ def assemble_and_check_png(root, input_data, name, width):
 
     decoded_data = zlib.decompress(idat_data)
     # apply filter types to compare with original data
-    scanlines = [decoded_data[x:x + width + 1] for x in range(0, len(decoded_data), width + 1)]
+    scanlines = [decoded_data[x:x + width*depth + 1]
+                 for x in range(0, len(decoded_data), width*depth + 1)]
     reconstructed_data = []
     for line in scanlines:
         reconstructed_data.extend(apply_filter(line))
@@ -75,6 +76,20 @@ def assemble_and_check_png(root, input_data, name, width):
     print("input data:", input_data, list(input_data))
     print("reconstructed data:", reconstructed_data)
     return list(input_data) == reconstructed_data
+
+
+def get_depth(color_type: int) -> int:
+    if color_type == 0:
+        return 1  # gray
+    elif color_type == 2:
+        return 3  # RGB
+    elif color_type == 3:
+        return 1  # palette (TODO: is this correct?)
+    elif color_type == 4:
+        return 2  # gray with alpha
+    elif color_type == 6:
+        return 4  # RGB with alpha
+    raise ValueError(f"invalid color type {color_type}")
 
 
 def create_test_suite(ui):
@@ -86,43 +101,49 @@ def create_test_suite(ui):
     unittest.add_source_files(join(root, "tb_png_encoder.vhd"))
     tb_deflate = unittest.entity("tb_png_encoder")
 
-    for height, width in ((1, 1), (4, 4), (5, 3), (12, 12),
-                          (80, 60), (120, 160)):
+    # TODO: simplify test case generation
+    for width, height in ((1, 1), (4, 4), (5, 3), (12, 12), (60, 80)):
         Case = namedtuple("Case", ["name", "input_buffer_size",
                                    "search_buffer_size", "data_in"])
-        testcases = (
-            Case("increment", 12, 12,
-                 [i % 256 for i in range(height*width)]),
-            Case("ones", 12, 12, [1 for _ in range(height*width)]),
-            Case("random", 12, 12,
-                 [randint(0, 255) for _ in range(height * width)]),
-        )
+        for ctype in (0, 2, 4, 6):
+            depth = get_depth(ctype)
+            testcases = (
+                Case("increment", 12, 12,
+                     [i % 256 for i in range(height*width*depth)]),
+                Case("ones", 12, 12, [1 for _ in range(height*width*depth)]),
+                Case("random", 12, 12,
+                     [randint(0, 255) for _ in range(height*width*depth)]),
+            )
 
-        # TODO: fix unequal input and search buffer size:
-        #       f. e. unittest.tb_png_encoder.ones_12x12_row_filter_1_btype_1
-        #             input buffer: 10, search buffer: 12
+            # TODO: fix unequal input and search buffer size:
+            #       unittest.tb_png_encoder.ones_12x12_row_filter_1_btype_1
+            #       input buffer: 10, search buffer: 12
 
-        for case, row_filter, btype in itertools.product(
-                testcases, (0, 1), (0, 1)):
-            input_bytes = bytearray(case.data_in)
+            for case, row_filter, btype in itertools.product(
+                    testcases, (0, 1), (0, 1)):
+                if row_filter != 0 and width != 12 and height != 12:
+                    continue  # skip some tests to reduce execution time
+                input_bytes = bytearray(case.data_in)
 
-            id_ = (f"{case.name}_{width}x{height}_row_filter_{row_filter}"
-                   f"_btype_{btype}")
-            generics = {
-                "id": id_,
-                "C_IMG_WIDTH": width,
-                "C_IMG_HEIGHT": height,
-                "C_IMG_BIT_DEPTH": 8,
-                "C_INPUT_BUFFER_SIZE": case.input_buffer_size,
-                "C_SEARCH_BUFFER_SIZE": case.search_buffer_size,
-                "C_BTYPE": btype,
-                "C_ROW_FILTER_TYPE": row_filter,
-            }
-            tb_deflate.add_config(
-                name=id_, generics=generics,
-                pre_config=create_stimuli(root, id_, case.data_in),
-                post_check=functools.partial(
-                    assemble_and_check_png, root, input_bytes, id_, width))
+                id_ = (f"{case.name}_{width}x{height}_row_filter_{row_filter}"
+                       f"_color_{ctype}_btype_{btype}")
+                generics = {
+                    "id": id_,
+                    "C_IMG_WIDTH": width,
+                    "C_IMG_HEIGHT": height,
+                    "C_IMG_BIT_DEPTH": 8,
+                    "C_COLOR_TYPE": ctype,
+                    "C_INPUT_BUFFER_SIZE": case.input_buffer_size,
+                    "C_SEARCH_BUFFER_SIZE": case.search_buffer_size,
+                    "C_BTYPE": btype,
+                    "C_ROW_FILTER_TYPE": row_filter,
+                }
+                tb_deflate.add_config(
+                    name=id_, generics=generics,
+                    pre_config=create_stimuli(root, id_, case.data_in),
+                    post_check=functools.partial(
+                        assemble_and_check_png, root, input_bytes, id_,
+                        width, depth))
 
 
 if __name__ == "__main__":

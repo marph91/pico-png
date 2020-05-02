@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 package png_pkg is
+  function get_img_depth(color_type : integer) return integer;
   function xor_vector(a, b : std_logic_vector) return std_logic_vector;
   function revert_vector(slv_in : std_logic_vector) return std_logic_vector;
   function calculate_crc32(data : std_logic_vector;
@@ -17,6 +18,24 @@ package png_pkg is
 end png_pkg;
 
 package body png_pkg is
+  -- get the image depth, based on the color type
+  function get_img_depth(color_type : integer) return integer is
+  begin
+    if color_type = 0 then
+      return 1; -- gray
+    elsif color_type = 2 then
+      return 3; -- RGB
+    elsif color_type = 3 then
+      return 1; -- palette (TODO: is this correct?)
+    elsif color_type = 4 then
+      return 2; -- gray with alpha
+    elsif color_type = 6 then
+      return 4; -- RGB with alpha
+    else
+      assert false report "invalid color type " & to_string(color_type);
+    end if;
+  end;
+
   -- xor two vectors
   function xor_vector(a, b : std_logic_vector) return std_logic_vector is
     variable c : std_logic_vector(a'RANGE);

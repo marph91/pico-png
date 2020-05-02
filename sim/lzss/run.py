@@ -34,6 +34,10 @@ def create_test_suite(ui):
                    "u": 7, "d": 8, "h": 9, "e": 10, "r": 11, ".": 12}
     complex_list = [encode_dict[letter] for letter in complex_sentence]
 
+    # structure of data_out in case of match:
+    # MSB: 1 (match), 12 bit: match distance, 4 bit: match length
+    # structure of data_out in case of non match:
+    # MSB: 0 (non match), 8 bit literal data, 8 bit ignored
     Case = namedtuple("Case", ["name", "input_buffer_size",
                                "search_buffer_size", "data_in", "data_out"])
     testcases = [

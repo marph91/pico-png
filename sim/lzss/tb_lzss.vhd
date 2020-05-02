@@ -19,13 +19,15 @@ entity tb_lzss is
     runner_cfg           : string;
     id                   : string;
     C_INPUT_BUFFER_SIZE  : integer;
-    C_SEARCH_BUFFER_SIZE : integer
+    C_SEARCH_BUFFER_SIZE : integer;
+    C_MIN_MATCH_LENGTH   : integer
   );
 end entity;
 
 architecture tb of tb_lzss is
   signal sl_clk : std_logic := '0';
   signal sl_flush : std_logic := '0';
+  signal sl_get : std_logic := '1';
   signal sl_valid_in : std_logic := '0';
   signal slv_data_in : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out : std_logic := '0';
@@ -41,11 +43,13 @@ begin
   dut : entity png_lib.lzss
   generic map (
     C_INPUT_BUFFER_SIZE    => C_INPUT_BUFFER_SIZE,
-    C_SEARCH_BUFFER_SIZE   => C_SEARCH_BUFFER_SIZE
+    C_SEARCH_BUFFER_SIZE   => C_SEARCH_BUFFER_SIZE,
+    C_MIN_MATCH_LENGTH     => C_MIN_MATCH_LENGTH
     )
   port map (
     isl_clk     => sl_clk,
     isl_flush   => sl_flush,
+    isl_get     => sl_get,
     isl_valid   => sl_valid_in,
     islv_data   => slv_data_in,
     oslv_data   => slv_data_out,

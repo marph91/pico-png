@@ -55,7 +55,8 @@ def create_test_suite(ui):
               encode_dict["h"] << 8,
               encode_dict["e"] << 8,
               encode_dict["r"] << 8,
-              (1 << 16) + (10 << 4) + 2,
+              encode_dict["u"] << 8,
+              encode_dict["m"] << 8,
               encode_dict["."] << 8,
               ]),
     ]
@@ -64,7 +65,8 @@ def create_test_suite(ui):
         generics = {
             "id": case.name,
             "C_INPUT_BUFFER_SIZE": case.input_buffer_size,
-            "C_SEARCH_BUFFER_SIZE": case.search_buffer_size,    
+            "C_SEARCH_BUFFER_SIZE": case.search_buffer_size,
+            "C_MIN_MATCH_LENGTH": 3,
         }
         tb_lzss.add_config(
             name=case.name, generics=generics,

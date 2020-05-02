@@ -9,11 +9,12 @@ entity lzss is
   generic (
     C_INPUT_BUFFER_SIZE  : integer range 3 to 258 := 10;
     C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
-    C_MIN_MATCH_LENGTH   : integer range 1 to 16 := 2
+    C_MIN_MATCH_LENGTH   : integer range 3 to 16 := 3
   );
   port (
     isl_clk    : in std_logic;
     isl_flush  : in std_logic;
+    isl_get    : in std_logic;
     isl_valid  : in std_logic;
     islv_data  : in std_logic_vector(7 downto 0);
     oslv_data  : out std_logic_vector(16 downto 0);
@@ -32,7 +33,7 @@ architecture behavioral of lzss is
   type t_match is record
     -- TODO: is this fixed?
     int_offset     : integer range 0 to 2**12-1;
-    int_length     : integer range 0 to 2**4-1;
+    int_length     : integer range 0 to 2**4-1; -- TODO: 2**5?
     slv_next_datum : std_logic_vector(7 downto 0);
   end record t_match;
   signal rec_best_match : t_match := (0, 0, (others => '0'));
@@ -55,6 +56,8 @@ begin
     variable v_sl_max_length : std_logic := '0';
   begin
     if rising_edge(isl_clk) then
+      assert not (isl_valid = '1' and int_datums_to_flush > 0);
+
       osl_finish <= '0';
       sl_valid_out <= '0';
 
@@ -69,8 +72,6 @@ begin
 
         when FILL =>
           sl_found_match <= '0';
-
-          assert not (isl_valid = '1' and int_datums_to_flush > 0);
 
           if isl_valid = '1' then
             int_datums_to_fill <= int_datums_to_fill - 1;
@@ -87,6 +88,10 @@ begin
             if int_datums_to_flush = 1 then
               sl_last_input <= '1';
             end if;
+          elsif sl_last_input = '1' then
+            sl_last_input <= '0';
+            state <= IDLE;
+            osl_finish <= '1';
           end if;
 
         when MATCH =>
@@ -132,20 +137,22 @@ begin
           end if;
 
         when OUTPUT_MATCH =>
-          int_start_index <= 1;
-          if sl_found_match = '1' and rec_best_match.int_length >= C_MIN_MATCH_LENGTH then
-            int_datums_to_fill <= rec_best_match.int_length;
-          else
-            int_datums_to_fill <= rec_best_match.int_length + 1;
-          end if;
-          sl_valid_out <= '1';
+          if isl_get = '1' then
+            int_start_index <= 1;
+            if sl_found_match = '1' and rec_best_match.int_length >= C_MIN_MATCH_LENGTH then
+              int_datums_to_fill <= rec_best_match.int_length;
+            else
+              int_datums_to_fill <= rec_best_match.int_length + 1;
+            end if;
+            sl_valid_out <= '1';
 
-          if sl_last_input = '0' then
-            state <= FILL;
-          else
-            sl_last_input <= '0';
-            state <= IDLE;
-            osl_finish <= '1';
+            if sl_last_input = '0' then
+              state <= FILL;
+            else
+              sl_last_input <= '0';
+              state <= IDLE;
+              osl_finish <= '1';
+            end if;
           end if;
 
       end case;

@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library util;
 use util.math_pkg.all;
+use util.png_pkg.all;
 
 entity huffman is
   generic (
@@ -42,15 +43,6 @@ architecture behavioral of huffman is
   type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, SEND_BYTES);
   signal state : t_states := IDLE;
 
-  function revert_vector(slv_in: in std_logic_vector) return std_logic_vector is
-    variable v_slv_reverted: std_logic_vector(slv_in'REVERSE_RANGE);
-  begin
-    for i in slv_in'RANGE loop
-      v_slv_reverted(i) := slv_in(i);
-    end loop;
-    return v_slv_reverted;
-  end;
-
   -- in case "slv_word" doesn't need to be truncated, "bits_to_shift" can be omitted
   procedure barrel_shifter(signal slv_buffer: inout std_logic_vector;
                            slv_word: in std_logic_vector;
@@ -75,28 +67,28 @@ architecture behavioral of huffman is
   end;
 
 begin
+  -- TODO: BTYPE & BFINAL don't belong to huffman, but rather to deflate.
+  -- Problem:
+  -- BTYPE & BFINAL are prepended to all data blocks (compressed and uncompressed)
+  -- LEN and NLEN are specific to C_BTYPE = 0
   gen_huffman: if C_BTYPE = 0 generate
     -- 3.2.4. Non-compressed blocks (BTYPE=00)
     -- no huffman encoding
     -- 2 byte LEN, 2 byte NLEN, X bits DATA
 
-    -- TODO: this doesn't belong to huffman, but rather to deflate
-    -- problem:
-    -- BTYPE & BFINAL are prepended to all data blocks (compressed and uncompressed)
-    -- LEN and NLEN are specific to C_BTYPE = 0
-  proc_assemble_32_bit: process(isl_clk)
-  begin
-    if rising_edge(isl_clk) then
-      if isl_valid = '1' then
-        slv_64_bit_buffer(63 - int_current_index downto 63 - int_current_index - C_BITWIDTH + 1) <=
-          islv_data(islv_data'HIGH downto islv_data'HIGH - C_BITWIDTH + 1);
-        int_current_index <= int_current_index + C_BITWIDTH;
-      elsif int_current_index >= 32 then
-        slv_64_bit_buffer <= slv_64_bit_buffer(31 downto 0) & x"00000000";
-        int_current_index <= int_current_index - 32;
+    proc_assemble_32_bit: process(isl_clk)
+    begin
+      if rising_edge(isl_clk) then
+        if isl_valid = '1' then
+          slv_64_bit_buffer(63 - int_current_index downto 63 - int_current_index - C_BITWIDTH + 1) <=
+            islv_data(islv_data'HIGH downto islv_data'HIGH - C_BITWIDTH + 1);
+          int_current_index <= int_current_index + C_BITWIDTH;
+        elsif int_current_index >= 32 then
+          slv_64_bit_buffer <= slv_64_bit_buffer(31 downto 0) & x"00000000";
+          int_current_index <= int_current_index - 32;
+        end if;
       end if;
-    end if;
-  end process;
+    end process;
 
     proc_no_encoding: process(isl_clk)
       variable v_bfinal : std_logic := '0';
@@ -180,7 +172,8 @@ begin
                 -- no match = literal/raw data
                 state <= LITERAL_CODE;
               else
-                -- match -> LENGTH_CODE -> EXTRA_LENGTH_BITS -> DISTANCE_CODE -> EXTRA_DISTANCE_BITS
+                -- match, following states:
+                -- LENGTH_CODE -> EXTRA_LENGTH_BITS -> DISTANCE_CODE -> EXTRA_DISTANCE_BITS
                 state <= LENGTH_CODE;
               end if;
               slv_current_value <= islv_data;

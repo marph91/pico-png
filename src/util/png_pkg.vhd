@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 package png_pkg is
   function xor_vector(a, b : std_logic_vector) return std_logic_vector;
-  function invert(a : std_logic_vector) return std_logic_vector;
+  function revert_vector(slv_in : std_logic_vector) return std_logic_vector;
   function calculate_crc32(data : std_logic_vector;
                            revert : std_logic) return std_logic_vector;
   function calculate_crc32(data : std_logic_vector;
@@ -28,14 +28,15 @@ package body png_pkg is
     return c;
   end xor_vector;
 
-  function invert(a : std_logic_vector) return std_logic_vector is
-    variable v_slv_out : std_logic_vector(a'LENGTH-1 downto 0) := (others => '0');
+  -- revert the bitorder of a vector
+  function revert_vector(slv_in : std_logic_vector) return std_logic_vector is
+    variable v_slv_reverted: std_logic_vector(slv_in'REVERSE_RANGE);
   begin
-    for i in a'RANGE loop
-      v_slv_out(v_slv_out'HIGH - (i - a'LOW)) := a(i);
+    for i in slv_in'RANGE loop
+      v_slv_reverted(i) := slv_in(i);
     end loop;
-    return v_slv_out;
-  end function;
+    return v_slv_reverted;
+  end;
 
   function calculate_crc32(data : std_logic_vector;
                            revert : std_logic) return std_logic_vector is
@@ -66,7 +67,7 @@ package body png_pkg is
 
     -- invert the bitorder of each byte
     for i in 0 to data_in_preprocessed'LENGTH / 8 - 1 loop
-      data_in_preprocessed((i+1)*8-1 downto i*8) := invert(data_in_preprocessed((i+1)*8-1 downto i*8));
+      data_in_preprocessed((i+1)*8-1 downto i*8) := revert_vector(data_in_preprocessed((i+1)*8-1 downto i*8));
     end loop;
 
     -- assign start value for crc calculation
@@ -89,7 +90,7 @@ package body png_pkg is
 
     -- invert the bitorder of each byte
     for i in 0 to v_crc_new'LENGTH / 8 - 1 loop
-      v_crc_new((i+1)*8-1 downto i*8) := invert(v_crc_new((i+1)*8-1 downto i*8));
+      v_crc_new((i+1)*8-1 downto i*8) := revert_vector(v_crc_new((i+1)*8-1 downto i*8));
     end loop;
     -- invert the data bits
     v_crc_new := not v_crc_new;

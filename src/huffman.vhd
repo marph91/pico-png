@@ -52,14 +52,27 @@ architecture behavioral of huffman is
     return v_slv_reverted;
   end;
 
+  -- in case "slv_word" doesn't need to be truncated, "bits_to_shift" can be omitted
   procedure barrel_shifter(signal slv_buffer: inout std_logic_vector;
                            slv_word: in std_logic_vector;
-                           signal int_index: inout integer) is
+                           signal int_index: inout integer range 0 to 63) is
   begin
     slv_buffer(slv_buffer'HIGH downto slv_word'LENGTH) <=
       slv_buffer(slv_buffer'HIGH - slv_word'LENGTH downto 0);
-    slv_buffer(slv_word'LENGTH-1 downto 0) <= slv_word;
+    slv_buffer(slv_word'LENGTH-1 downto 0) <= slv_word(slv_word'LENGTH-1 downto 0);
     int_index <= int_index + slv_word'LENGTH;
+  end;
+
+  -- "bits_to_shift" have to passed separately, because "slv_word" needs to be constant
+  procedure barrel_shifter(signal slv_buffer: inout std_logic_vector;
+                           slv_word: in std_logic_vector;
+                           bits_to_shift: in integer range 1 to 13;
+                           signal int_index: inout integer range 0 to 63) is
+  begin
+    barrel_shifter(
+      slv_buffer,
+      slv_word(bits_to_shift-1 downto 0),
+      int_index);
   end;
 
 begin
@@ -191,7 +204,8 @@ begin
 
             barrel_shifter(
               slv_64_bit_buffer,
-              std_logic_vector(to_unsigned(v_int_code, v_int_bitwidth)),
+              std_logic_vector(to_unsigned(v_int_code, 13)),
+              v_int_bitwidth,
               int_current_index);
 
             state <= SEND_BYTES;
@@ -257,7 +271,8 @@ begin
             -- values get truncated on purpose
             barrel_shifter(
               slv_64_bit_buffer,
-              std_logic_vector(to_unsigned(v_int_code, v_int_bitwidth)),
+              std_logic_vector(to_unsigned(v_int_code, 13)),
+              v_int_bitwidth,
               int_current_index);
 
             -- will save one cycle in EXTRA_LENGTH_BITS for some cases
@@ -299,7 +314,8 @@ begin
               -- values get truncated on purpose
               barrel_shifter(
                 slv_64_bit_buffer,
-                std_logic_vector(to_unsigned(v_int_match_length - v_int_start_value, v_int_bitwidth)),
+                std_logic_vector(to_unsigned(v_int_match_length - v_int_start_value, 13)),
+                v_int_bitwidth,
                 int_current_index);
             end if;
             state <= DISTANCE_CODE;
@@ -434,7 +450,8 @@ begin
             if v_int_bitwidth > 0 then
               barrel_shifter(
                 slv_64_bit_buffer,
-                std_logic_vector(to_unsigned(v_int_match_distance - v_int_start_value, v_int_bitwidth)),
+                std_logic_vector(to_unsigned(v_int_match_distance - v_int_start_value, 13)),
+                v_int_bitwidth,
                 int_current_index);
             end if;
 
@@ -460,7 +477,8 @@ begin
               -- pad zeros (for full byte) at the end
               barrel_shifter(
                 slv_64_bit_buffer,
-                std_logic_vector(to_unsigned(0, 8-int_current_index)),
+                std_logic_vector(to_unsigned(0, 13)),
+                8-int_current_index,
                 int_current_index);
             else
               if sl_bfinal = '1' then

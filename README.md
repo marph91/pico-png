@@ -7,13 +7,13 @@
 The supported parameters are:
 | Parameter (toplevel generic) | Supported values | Remarks |
 | :---: | :---: | :---: |
-| C_IMG_WIDTH | - | - |
-| C_IMG_HEIGHT | - | - |
+| C_IMG_WIDTH | tested up to 160 pixel | - |
+| C_IMG_HEIGHT | tested up to 120 pixel | - |
 | C_IMG_DEPTH | 1, 2, 3, 4 | derived from color type |
 | C_IMG_BIT_DEPTH | 8 bit | - |
 | C_COLOR_TYPE | 0 (gray), 2 (RGB), 4 (gray + alpha), 6 (RGBA) | - |
-| C_INPUT_BUFFER_SIZE | - | - |
-| C_SEARCH_BUFFER_SIZE | - | - |
+| C_INPUT_BUFFER_SIZE | tested up to 12 | - |
+| C_SEARCH_BUFFER_SIZE | tested up to 12 | - |
 | C_BTYPE | 0 (no compression), 1 (fixed huffman) | - |
 | C_ROW_FILTER_TYPE | 0 (no filter), 1 (subtraction filter) | - |
 

@@ -22,11 +22,11 @@ entity png_encoder is
 
     -- 0: greyscale
     -- 1: invalid
-    -- 2: truecolor (not supported yet)
+    -- 2: truecolor
     -- 3: indexed-color (not supported yet)
-    -- 4: greyscale with alpha (not supported yet)
+    -- 4: greyscale with alpha
     -- 5: invalid
-    -- 6: truecolor with alpha (not supported yet)
+    -- 6: truecolor with alpha
     C_COLOR_TYPE         : integer range 0 to 6 := 0;
 
     C_INPUT_BUFFER_SIZE  : integer range 3 to 258 := 12;

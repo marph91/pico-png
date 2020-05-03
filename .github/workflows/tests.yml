@@ -1,0 +1,17 @@
+name: tests
+
+on:
+  push:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    container: ghdl/vunit:gcc-master
+    steps:
+      - uses: actions/checkout@v1
+      - name: Run tests
+        run: |
+          cd sim
+          ./run_all.py -p4

@@ -159,6 +159,7 @@ begin
             sl_finish <= '0';
 
             -- send everything in one block
+            -- TODO: check again how the header bits are parsed
             barrel_shifter(
               slv_64_bit_buffer,
               revert_vector(std_logic_vector(to_unsigned(C_BTYPE, 2)) & '1'),

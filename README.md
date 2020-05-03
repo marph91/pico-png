@@ -6,7 +6,7 @@
 
 The supported parameters are:
 | Parameter (toplevel generic) | Supported values | Remarks |
-| :---: | :---: | :---: |
+| :--- | :--- | :--- |
 | C_IMG_WIDTH | tested up to 160 pixel | - |
 | C_IMG_HEIGHT | tested up to 120 pixel | - |
 | C_IMG_DEPTH | 1, 2, 3, 4 | derived from color type |
@@ -18,8 +18,8 @@ The supported parameters are:
 | C_ROW_FILTER_TYPE | 0 (no filter), 1 (subtraction filter) | - |
 
 The signals are:
-| Parameter (toplevel generic) | Remarks |
-| :---: | :---: |
+| Signal | Remarks |
+| :--- | :--- |
 | isl_clk | Clock signal |
 | isl_start | Signals the start for new image data. |
 | isl_valid | Input data is valid. |

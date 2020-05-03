@@ -11,6 +11,10 @@ jobs:
     container: ghdl/vunit:gcc-master
     steps:
       - uses: actions/checkout@v1
+      - name: Install dependencies
+        run: |
+          apt update
+          apt install --yes python3-pil
       - name: Run tests
         run: |
           cd sim

@@ -27,11 +27,12 @@ end;
 architecture behavioral of lzss is
   constant C_MAX_MATCH_LENGTH : integer := min_int(C_INPUT_BUFFER_SIZE-1, 2**4-1);
 
-  type t_slv_buffer is array(C_SEARCH_BUFFER_SIZE downto -C_INPUT_BUFFER_SIZE+1) of std_logic_vector(7 downto 0);
+  -- 0 is part of the input buffer
+  type t_slv_buffer is array(C_SEARCH_BUFFER_SIZE+1 downto -(C_INPUT_BUFFER_SIZE-1)) of std_logic_vector(7 downto 0);
   signal a_buffer : t_slv_buffer := (others => (others => 'U'));
 
   type t_match is record
-    -- TODO: is this fixed?
+    -- TODO: is this fixed? -> 8 bit length, 15 bit distance
     int_offset     : integer range 0 to 2**12-1;
     int_length     : integer range 0 to 2**4-1; -- TODO: 2**5?
     slv_next_datum : std_logic_vector(7 downto 0);
@@ -42,7 +43,7 @@ architecture behavioral of lzss is
   signal state : t_states := IDLE;
 
   signal int_datums_to_fill : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
-  signal int_start_index : integer range 1 to C_SEARCH_BUFFER_SIZE := 0;
+  signal int_start_index : integer range 1 to C_SEARCH_BUFFER_SIZE+1 := 0;
   signal sl_valid_out : std_logic := '0';
   signal sl_found_match : std_logic := '0';
 
@@ -52,11 +53,12 @@ architecture behavioral of lzss is
 begin
   proc_lzss: process(isl_clk)
     variable v_int_match_length : integer range 1 to C_MAX_MATCH_LENGTH := 1;
-    variable v_int_search_index : integer range 0 to C_SEARCH_BUFFER_SIZE := 0;
+    variable v_int_search_index : integer range 0 to C_SEARCH_BUFFER_SIZE+1 := 0;
     variable v_sl_max_length : std_logic := '0';
   begin
     if rising_edge(isl_clk) then
       assert not (isl_valid = '1' and int_datums_to_flush > 0);
+      assert not (isl_valid = '1' and state /= FILL);
 
       osl_finish <= '0';
       sl_valid_out <= '0';
@@ -127,7 +129,7 @@ begin
           end if;
 
           -- increment or change state if the whole buffer was inspected
-          if v_int_search_index < C_SEARCH_BUFFER_SIZE and
+          if v_int_search_index < C_SEARCH_BUFFER_SIZE+1 and
              v_int_search_index /= 0 and
              v_int_match_length < C_MAX_MATCH_LENGTH and
              sl_last_input = '0' then

@@ -65,6 +65,14 @@ def assemble_and_check_png(root, input_data, name, width, depth):
     idat_length = int.from_bytes(png_bytes[idat_index - 4:idat_index], "big")
     idat_data = png_bytes[idat_index + 4:idat_index + 4 + idat_length]
 
+    print("debug info:")
+    print([hex(d) for d in idat_data])
+    print(["".join(reversed(bin(d)[2:].zfill(8))) for d in idat_data])
+    print("infgen command:\n",
+          "echo -n -e",
+          "".join(["\\\\x" + hex(d)[2:].zfill(2) for d in idat_data]),
+          "| ./infgen")
+
     decoded_data = zlib.decompress(idat_data)
     # apply filter types to compare with original data
     scanlines = [decoded_data[x:x + width*depth + 1]
@@ -102,8 +110,7 @@ def create_test_suite(ui):
     tb_deflate = unittest.entity("tb_png_encoder")
 
     # TODO: simplify test case generation
-    # TODO: fix (5, 3)
-    for width, height in ((1, 1), (4, 4), (12, 12), (60, 80)):
+    for width, height in ((1, 1), (4, 4), (3, 5), (5, 3), (12, 12), (60, 80)):
         Case = namedtuple("Case", ["name", "input_buffer_size",
                                    "search_buffer_size", "data_in"])
         for ctype in (0, 2, 4, 6):
@@ -115,10 +122,6 @@ def create_test_suite(ui):
                 Case("random", 12, 12,
                      [randint(0, 255) for _ in range(height*width*depth)]),
             )
-
-            # TODO: fix unequal input and search buffer size:
-            #       unittest.tb_png_encoder.ones_12x12_row_filter_1_btype_1
-            #       input buffer: 10, search buffer: 12
 
             for case, row_filter, btype in itertools.product(
                     testcases, (0, 1), (0, 1)):

@@ -59,10 +59,17 @@ architecture behavioral of huffman is
                            slv_word: in std_logic_vector;
                            bits_to_shift: in integer range 1 to 13;
                            signal int_index: inout integer range 0 to 63) is
+    variable v_relevant_bits : std_logic_vector(bits_to_shift-1 downto 0);
   begin
+    if slv_word'ASCENDING then
+      v_relevant_bits := slv_word(0 to bits_to_shift-1);
+    else
+      v_relevant_bits := slv_word(bits_to_shift-1 downto 0);
+    end if;
+
     barrel_shifter(
       slv_buffer,
-      slv_word(bits_to_shift-1 downto 0),
+      v_relevant_bits,
       int_index);
   end;
 
@@ -159,7 +166,7 @@ begin
             sl_finish <= '0';
 
             -- send everything in one block
-            -- TODO: check again how the header bits are parsed
+            -- TODO: revisit all the reverting
             barrel_shifter(
               slv_64_bit_buffer,
               revert_vector(std_logic_vector(to_unsigned(C_BTYPE, 2)) & '1'),
@@ -304,7 +311,7 @@ begin
             -- values get truncated on purpose
             barrel_shifter(
               slv_64_bit_buffer,
-              std_logic_vector(to_unsigned(v_int_match_length - v_int_start_value, 13)),
+              revert_vector(std_logic_vector(to_unsigned(v_int_match_length - v_int_start_value, 13))),
               v_int_bitwidth,
               int_current_index);
 
@@ -439,7 +446,7 @@ begin
 
             barrel_shifter(
               slv_64_bit_buffer,
-              std_logic_vector(to_unsigned(v_int_match_distance - v_int_start_value, 13)),
+              revert_vector(std_logic_vector(to_unsigned(v_int_match_distance - v_int_start_value, 13))),
               v_int_bitwidth,
               int_current_index);
 

@@ -109,45 +109,58 @@ def create_test_suite(ui):
     unittest.add_source_files(join(root, "tb_png_encoder.vhd"))
     tb_deflate = unittest.entity("tb_png_encoder")
 
-    # TODO: simplify test case generation
-    for width, height in ((1, 1), (4, 4), (3, 5), (5, 3), (12, 12), (60, 80)):
-        Case = namedtuple("Case", ["name", "input_buffer_size",
-                                   "search_buffer_size", "data_in"])
+    # TODO: simplify test case generation (also use dataclasses, when
+    #       python 3.7 is available at opensuse)
+    Case = namedtuple("Case", ["name", "width", "height", "depth", "ctype",
+                               "btype", "row_filter", "data_in"])
+    testcases = []
+    for width, height in ((1, 1), (4, 4), (12, 12), (60, 80)):
         for ctype in (0, 2, 4, 6):
             depth = get_depth(ctype)
-            testcases = (
-                Case("increment", 12, 12,
-                     [i % 256 for i in range(height*width*depth)]),
-                Case("ones", 12, 12, [1 for _ in range(height*width*depth)]),
-                Case("random", 12, 12,
-                     [randint(0, 255) for _ in range(height*width*depth)]),
-            )
 
-            for case, row_filter, btype in itertools.product(
-                    testcases, (0, 1), (0, 1)):
+            for row_filter, btype in itertools.product((0, 1), (0, 1)):
                 if row_filter != 0 and width != 12 and height != 12:
                     continue  # skip some tests to reduce execution time
-                input_bytes = bytearray(case.data_in)
 
-                id_ = (f"{case.name}_{width}x{height}_row_filter_{row_filter}"
-                       f"_color_{ctype}_btype_{btype}")
-                generics = {
-                    "id": id_,
-                    "C_IMG_WIDTH": width,
-                    "C_IMG_HEIGHT": height,
-                    "C_IMG_BIT_DEPTH": 8,
-                    "C_COLOR_TYPE": ctype,
-                    "C_INPUT_BUFFER_SIZE": case.input_buffer_size,
-                    "C_SEARCH_BUFFER_SIZE": case.search_buffer_size,
-                    "C_BTYPE": btype,
-                    "C_ROW_FILTER_TYPE": row_filter,
-                }
-                tb_deflate.add_config(
-                    name=id_, generics=generics,
-                    pre_config=create_stimuli(root, id_, case.data_in),
-                    post_check=functools.partial(
-                        assemble_and_check_png, root, input_bytes, id_,
-                        width, depth))
+                testcases.extend([
+                    Case("increment", width, height, depth, ctype, btype,
+                         row_filter,
+                         [i % 256 for i in range(height*width*depth)]),
+                    Case("ones", width, height, depth, ctype, btype,
+                         row_filter, [1 for _ in range(height*width*depth)]),
+                    Case("random", width, height, depth, ctype, btype,
+                         row_filter,
+                         [randint(0, 255) for _ in range(height*width*depth)]),
+                ])
+
+    # regression
+    testcases.extend([
+        Case("ones", 3, 5, 3, 2, 1, 0, [1 for _ in range(3*5*3)]),
+        Case("ones", 5, 3, 2, 4, 1, 0, [1 for _ in range(5*3*2)]),
+    ])
+
+    for case in testcases:
+        input_bytes = bytearray(case.data_in)
+
+        id_ = (f"{case.name}_{case.width}x{case.height}_row_filter_"
+               f"{case.row_filter}_color_{case.ctype}_btype_{case.btype}")
+        generics = {
+            "id": id_,
+            "C_IMG_WIDTH": case.width,
+            "C_IMG_HEIGHT": case.height,
+            "C_IMG_BIT_DEPTH": 8,
+            "C_COLOR_TYPE": case.ctype,
+            "C_INPUT_BUFFER_SIZE": 12,
+            "C_SEARCH_BUFFER_SIZE": 12,
+            "C_BTYPE": case.btype,
+            "C_ROW_FILTER_TYPE": case.row_filter,
+        }
+        tb_deflate.add_config(
+            name=id_, generics=generics,
+            pre_config=create_stimuli(root, id_, case.data_in),
+            post_check=functools.partial(
+                assemble_and_check_png, root, input_bytes, id_,
+                case.width, case.depth))
 
 
 if __name__ == "__main__":

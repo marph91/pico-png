@@ -12,7 +12,6 @@ use sim.vunit_common_pkg.all;
 
 library vunit_lib;
 context vunit_lib.vunit_context;
-use vunit_lib.array_pkg.all;
 
 entity tb_deflate is
   generic (
@@ -35,7 +34,7 @@ architecture tb of tb_deflate is
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_rdy : std_logic := '0';
 
-  shared variable data_src : array_t;
+  shared variable data_src : integer_array_t;
 
   signal data_check_done, stimuli_done : boolean := false;
 
@@ -63,7 +62,7 @@ begin
   begin
     test_runner_setup(runner, runner_cfg);
     set_stop_level(failure);
-    data_src.load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
+    data_src := load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
 
     wait until (stimuli_done and
                 data_check_done and
@@ -75,10 +74,10 @@ begin
   proc_stimuli: process
   begin
     wait until rising_edge(sl_clk);
-    for i in 0 to data_src.width-1 loop
+    for i in 0 to width(data_src)-1 loop
       wait until rising_edge(sl_clk) and sl_rdy = '1';
       sl_valid_in <= '1';
-      slv_data_in <= std_logic_vector(to_unsigned(data_src.get(i, 0), slv_data_in'length));
+      slv_data_in <= std_logic_vector(to_unsigned(get(data_src, i, 0), slv_data_in'length));
       wait until rising_edge(sl_clk);
       sl_valid_in <= '0';
     end loop;

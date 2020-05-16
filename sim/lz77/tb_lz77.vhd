@@ -12,7 +12,6 @@ use sim.vunit_common_pkg.all;
 
 library vunit_lib;
 context vunit_lib.vunit_context;
-use vunit_lib.array_pkg.all;
 
 entity tb_lz77 is
   generic (
@@ -33,8 +32,8 @@ architecture tb of tb_lz77 is
   signal slv_data_out : std_logic_vector(16 + 7 downto 0) := (others => '0');
   signal sl_rdy : std_logic := '0';
 
-  shared variable data_src : array_t;
-  shared variable data_ref : array_t;
+  shared variable data_src : integer_array_t;
+  shared variable data_ref : integer_array_t;
 
   signal data_check_done, stimuli_done : boolean := false;
 
@@ -59,8 +58,8 @@ begin
   begin
     test_runner_setup(runner, runner_cfg);
     set_stop_level(failure);
-    data_src.load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
-    data_ref.load_csv(tb_path(runner_cfg) & "gen/output_" & id & ".csv");
+    data_src := load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
+    data_ref := load_csv(tb_path(runner_cfg) & "gen/output_" & id & ".csv");
 
     wait until (stimuli_done and
                 data_check_done and
@@ -72,11 +71,11 @@ begin
   proc_stimuli: process
   begin
     wait until rising_edge(sl_clk);
-    for i in 0 to data_src.width-1 loop
+    for i in 0 to width(data_src)-1 loop
       wait until rising_edge(sl_clk) and sl_rdy = '1';
       report "### input: " & integer'image(i);
       sl_valid_in <= '1';
-      slv_data_in <= std_logic_vector(to_unsigned(data_src.get(i, 0), slv_data_in'length));
+      slv_data_in <= std_logic_vector(to_unsigned(get(data_src, i, 0), slv_data_in'length));
       wait until rising_edge(sl_clk);
       sl_valid_in <= '0';
     end loop;
@@ -99,10 +98,10 @@ begin
     wait until rising_edge(sl_clk);
     data_check_done <= false;
 
-    for i in 0 to data_ref.width-1 loop
+    for i in 0 to width(data_ref)-1 loop
       wait until rising_edge(sl_clk) and sl_valid_out = '1';
-      report integer'image(data_ref.get(i, 0));
-      check_equal(slv_data_out, std_logic_vector(to_unsigned(data_ref.get(i, 0), slv_data_out'length)));
+      report integer'image(get(data_ref, i, 0));
+      check_equal(slv_data_out, std_logic_vector(to_unsigned(get(data_ref, i, 0), slv_data_out'length)));
     end loop;
     
     report ("Done checking");

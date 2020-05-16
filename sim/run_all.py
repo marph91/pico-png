@@ -31,7 +31,7 @@ def create_test_suites(prj):
         mod[0].close()
 
     # avoid error "type of a shared variable must be a protected type"
-    prj.set_compile_option("ghdl.flags", ["-frelaxed"])
+    prj.set_compile_option("ghdl.a_flags", ["-frelaxed"])
     prj.set_sim_option("ghdl.elab_flags", ["-frelaxed"])
 
 

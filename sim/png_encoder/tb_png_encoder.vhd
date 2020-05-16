@@ -1,9 +1,16 @@
-use std.textio.all;
+-- specify the types/functions manually to avoid naming conflicts with vunit
+-- i. e. for "width"
+use std.textio.line;
+use std.textio.text;
+use std.textio.write;
+use std.textio.writeline;
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library png_lib;
+
 library util;
 use util.math_pkg.all;
 use util.png_pkg.all;
@@ -13,7 +20,6 @@ use sim.vunit_common_pkg.all;
 
 library vunit_lib;
 context vunit_lib.vunit_context;
-use vunit_lib.array_pkg.all;
 
 entity tb_png_encoder is
   generic (
@@ -44,7 +50,7 @@ architecture tb of tb_png_encoder is
   signal sl_rdy : std_logic := '0';
   signal sl_finish : std_logic := '0';
 
-  shared variable data_src : array_t;
+  shared variable data_src : integer_array_t;
 
   signal data_check_done, stimuli_done : boolean := false;
 
@@ -79,11 +85,11 @@ begin
   main: process
   begin
     test_runner_setup(runner, runner_cfg);
-    data_src.load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
+    data_src := load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
 
-    check_equal(data_src.width, C_IMG_WIDTH*C_IMG_HEIGHT*get_img_depth(C_COLOR_TYPE)*C_IMG_BIT_DEPTH/8);
-    check_equal(data_src.height, 1);
-    check_equal(data_src.depth, 1);
+    check_equal(width(data_src), C_IMG_WIDTH*C_IMG_HEIGHT*get_img_depth(C_COLOR_TYPE)*C_IMG_BIT_DEPTH/8);
+    check_equal(height(data_src), 1);
+    check_equal(depth(data_src), 1);
 
     wait until (stimuli_done and
                 data_check_done and
@@ -99,10 +105,10 @@ begin
     wait until rising_edge(sl_clk);
     sl_start <= '0';
 
-    for i in 0 to data_src.width-1 loop
+    for i in 0 to width(data_src)-1 loop
       wait until rising_edge(sl_clk) and sl_rdy = '1';
       sl_valid_in <= '1';
-      slv_data_in <= std_logic_vector(to_unsigned(data_src.get(i, 0), slv_data_in'length));
+      slv_data_in <= std_logic_vector(to_unsigned(get(data_src, i, 0), slv_data_in'length));
       wait until rising_edge(sl_clk);
       sl_valid_in <= '0';
       wait until rising_edge(sl_clk);

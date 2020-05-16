@@ -1,9 +1,5 @@
--- specify the types/functions manually to avoid naming conflicts with vunit
--- i. e. for "width"
-use std.textio.line;
-use std.textio.text;
-use std.textio.write;
-use std.textio.writeline;
+-- only use the textio namespace to avoid naming conflicts with vunit, i. e. for "width"
+use std.textio;
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -120,8 +116,8 @@ begin
   end process;
 
   proc_data_check: process
-    file file_handler     : text open write_mode is tb_path(runner_cfg) & "gen/png_" & id & ".txt";
-    variable row          : line;
+    file file_handler     : textio.text open write_mode is tb_path(runner_cfg) & "gen/png_" & id & ".txt";
+    variable row          : textio.line;
     variable v_data_write : integer;
   begin
     wait until rising_edge(sl_clk);
@@ -129,8 +125,8 @@ begin
 
     while sl_finish = '0' loop
       if sl_valid_out = '1' then
-        write(row, slv_data_out);
-        writeline(file_handler, row);
+        textio.write(row, to_string(slv_data_out));
+        textio.writeline(file_handler, row);
       end if;
       wait until rising_edge(sl_clk);
     end loop;

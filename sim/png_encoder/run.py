@@ -16,9 +16,14 @@ from vunit import VUnit
 
 
 def create_stimuli(root: str, name: str, input_data: List[int]):
+    # write out csv only for debugging purposes
     filename = join(root, "gen", f"input_{name}.csv")
     with open(filename, "w") as infile:
         infile.write(", ".join(map(str, input_data)))
+
+    filename = join(root, "gen", f"input_{name}.raw")
+    with open(filename, "wb") as infile:
+        infile.write(bytes(input_data))  # only works for 8 bit values!
 
 
 def apply_filter(data: bytes) -> List[int]:

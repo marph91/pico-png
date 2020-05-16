@@ -81,7 +81,8 @@ begin
   main: process
   begin
     test_runner_setup(runner, runner_cfg);
-    data_src := load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
+    -- https://github.com/VUnit/vunit/blob/209e27d28cf9abb93b2d4f7ccc9e26882df11859/vunit/vhdl/array/src/array_pkg.vhd#L38
+    data_src := load_raw(tb_path(runner_cfg) & "gen/input_" & id & ".raw", 8, false);
 
     check_equal(width(data_src), C_IMG_WIDTH*C_IMG_HEIGHT*get_img_depth(C_COLOR_TYPE)*C_IMG_BIT_DEPTH/8);
     check_equal(height(data_src), 1);

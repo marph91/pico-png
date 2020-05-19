@@ -144,6 +144,16 @@ def create_test_suite(ui):
         Case("ones", 5, 3, 2, 4, 1, 0, [1 for _ in range(5*3*2)]),
     ])
 
+    # comparison to https://ipbloq.files.wordpress.com/2017/09/ipb-png-e-pb.pdf
+    height = 800
+    width = 480
+    ctype = 2
+    depth = get_depth(ctype)
+    testcases.extend([
+        Case("ones", height, width, depth, ctype, 1, 0,
+             [1 for _ in range(height*width*depth)]),
+    ])
+
     for case in testcases:
         input_bytes = bytearray(case.data_in)
 

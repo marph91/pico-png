@@ -5,6 +5,7 @@
 from glob import glob
 import imp
 import os
+import resource
 
 from vunit import VUnit
 
@@ -37,6 +38,12 @@ def create_test_suites(prj):
 
 if __name__ == "__main__":
     os.environ["VUNIT_SIMULATOR"] = "ghdl"
+
+    # Modify the stack size limit in order to avoid a stack overflow when
+    # loading large arrays. See also: https://github.com/VUnit/vunit/issues/652
+    resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
+                                               resource.RLIM_INFINITY))
+
     PRJ = VUnit.from_argv()
     create_test_suites(PRJ)
     PRJ.main()

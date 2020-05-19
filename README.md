@@ -1,6 +1,6 @@
 # pico-png
 
-`pico-png` is a VHDL implementation of a PNG encoder, as specified in RFC1950 and RFC1951.
+`pico-png` is a VHDL implementation of a PNG encoder, as specified in ISO/IEC 15948:2003, RFC1950 and RFC1951.
 
 ## Interface
 

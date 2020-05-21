@@ -144,8 +144,9 @@ begin
             slv_data_out <= buffered_output(int_output_index - 1 downto int_output_index - 8);
             int_output_index <= int_output_index - 8;
           elsif int_output_index > 0 then
+            -- TODO: check if this behaves correct
             -- fill the byte up with zeros
-            buffered_output(7 downto 0) <= buffered_output(7 downto 0) sll 8;
+            buffered_output(7 downto 0) <= (others => '0');
             int_output_index <= 8;
             sl_valid_out <= '0';
           else

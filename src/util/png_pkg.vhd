@@ -137,10 +137,12 @@ package body png_pkg is
 
     v_chunk_crc := calculate_crc32(chunk_type & chunk_data, '1');
 
-    -- TODO: not supported (ignored) by ghdl synthesis
+    -- TODO: not supported (ignored) by ghdl synthesis yet
+    -- synthesis translate_off
     if chunk_type = x"49454e44" then
       assert v_chunk_crc = x"ae426082" report to_hstring(v_chunk_crc);
     end if;
+    -- synthesis translate_on
     return v_chunk_length & chunk_type & chunk_data & v_chunk_crc;
   end generate_chunk;
 

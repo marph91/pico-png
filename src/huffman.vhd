@@ -491,15 +491,24 @@ begin
     begin
       if rising_edge(isl_clk) then
         if barrel_shifter.sl_valid_in = '1' then
-          buffer64.slv_data(buffer64.slv_data'HIGH downto barrel_shifter.int_bits) <=
-            buffer64.slv_data(buffer64.slv_data'HIGH - barrel_shifter.int_bits downto 0);
-          if barrel_shifter.sl_descending = '1' then
-            buffer64.slv_data(barrel_shifter.int_bits-1 downto 0) <= barrel_shifter.slv_data_in(barrel_shifter.int_bits-1 downto 0);
-          else
-            -- After reverting the bits, the important bits are at the other end of the slv.
-            -- I. e. starting at barrel_shifter.slv_data_in'HIGH, not 0.
-            buffer64.slv_data(barrel_shifter.int_bits-1 downto 0) <= barrel_shifter.slv_data_in(barrel_shifter.slv_data_in'HIGH downto barrel_shifter.slv_data_in'HIGH-barrel_shifter.int_bits+1);
-          end if;
+          -- shift the whole buffer
+          for pos in buffer64.slv_data'RANGE loop
+            buffer64.slv_data(pos) <= buffer64.slv_data((pos - barrel_shifter.int_bits) mod buffer64.slv_data'LENGTH);
+          end loop;
+
+          -- insert new values, maximum 13 (barrel_shifter.int_bits)
+          for pos in 0 to 12 loop
+            exit when pos = barrel_shifter.int_bits;
+
+            if barrel_shifter.sl_descending = '1' then
+              buffer64.slv_data(pos) <= barrel_shifter.slv_data_in(pos);
+            else
+              -- After reverting the bits, the important bits are at the other end of the slv.
+              -- I. e. starting at barrel_shifter.slv_data_in'HIGH, not 0.
+              buffer64.slv_data(pos) <=
+                barrel_shifter.slv_data_in(barrel_shifter.slv_data_in'HIGH-barrel_shifter.int_bits+pos+1);
+            end if;
+          end loop;
         end if;
       end if;
     end process;

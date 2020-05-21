@@ -8,7 +8,7 @@ use util.png_pkg.all;
 
 entity huffman is
   generic (
-    C_BTYPE : integer range 0 to 3 := 0;
+    C_BTYPE : integer range 0 to 3 := 1;
     C_BITWIDTH : integer := 17
   );
   port (

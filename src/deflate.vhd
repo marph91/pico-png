@@ -12,7 +12,7 @@ entity deflate is
     C_INPUT_BUFFER_SIZE  : integer range 3 to 258 := 10;
     C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
 
-    C_BTYPE              : integer range 0 to 2 := 0 -- 0: no huffman encoding
+    C_BTYPE              : integer range 0 to 3 := 1
   );
   port (
     isl_clk   : in std_logic;

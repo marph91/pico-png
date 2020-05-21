@@ -25,8 +25,12 @@ end;
 
 architecture behavioral of huffman is
   -- constant C_MAX_DATA_LENGTH : integer := 16; -- TODO: up to 2^16
-  signal int_current_index, int_current_index_d1 : integer range 0 to 63 := 0;
-  signal slv_64_bit_buffer : std_logic_vector(63 downto 0) := (others => '0');
+  type t_buffer64 is record
+    int_current_index : integer range 0 to 63;
+    int_current_index_d1 : integer range 0 to 63;
+    slv_data : std_logic_vector(63 downto 0);
+  end record;
+  signal buffer64 : t_buffer64 := (0, 0, (others => '0'));
 
   signal sl_valid_out : std_logic := '0';
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
@@ -65,12 +69,12 @@ begin
     begin
       if rising_edge(isl_clk) then
         if isl_valid = '1' then
-          slv_64_bit_buffer(63 - int_current_index downto 63 - int_current_index - C_BITWIDTH + 1) <=
+          buffer64.slv_data(63 - buffer64.int_current_index downto 63 - buffer64.int_current_index - C_BITWIDTH + 1) <=
             islv_data(islv_data'HIGH downto islv_data'HIGH - C_BITWIDTH + 1);
-          int_current_index <= int_current_index + C_BITWIDTH;
-        elsif int_current_index >= 32 then
-          slv_64_bit_buffer <= slv_64_bit_buffer(31 downto 0) & x"00000000";
-          int_current_index <= int_current_index - 32;
+          buffer64.int_current_index <= buffer64.int_current_index + C_BITWIDTH;
+        elsif buffer64.int_current_index >= 32 then
+          buffer64.slv_data <= buffer64.slv_data(31 downto 0) & x"00000000";
+          buffer64.int_current_index <= buffer64.int_current_index - 32;
         end if;
       end if;
     end process;
@@ -82,16 +86,16 @@ begin
       if rising_edge(isl_clk) then
         sl_finish <= '0';
 
-        if isl_valid = '0' and (int_current_index >= 32 or (isl_flush = '1' and int_current_index > 0)) then
-          if int_current_index <= 32 and isl_flush = '1' then
+        if isl_valid = '0' and (buffer64.int_current_index >= 32 or (isl_flush = '1' and buffer64.int_current_index > 0)) then
+          if buffer64.int_current_index <= 32 and isl_flush = '1' then
             v_bfinal := '1';
             sl_bfinal <= '1';
           end if;
 
-          if int_current_index >= 32 then
+          if buffer64.int_current_index >= 32 then
             v_len := std_logic_vector(to_unsigned(32/8, 16));
           else
-            v_len := std_logic_vector(to_unsigned(int_current_index/8, 16));
+            v_len := std_logic_vector(to_unsigned(buffer64.int_current_index/8, 16));
           end if;
 
           slv_block_data <=
@@ -99,7 +103,7 @@ begin
             std_logic_vector(to_unsigned(C_BTYPE, 2)) & v_bfinal & -- BTYPE & BFINAL
             v_len(7 downto 0) & v_len(15 downto 8) & -- LEN (MSByte second)
             not v_len(7 downto 0) & not v_len(15 downto 8) & -- NLEN (MSByte second)
-            slv_64_bit_buffer(63 downto 32); -- DATA
+            buffer64.slv_data(63 downto 32); -- DATA
           int_block_bytes_to_send <= 5 + to_integer(unsigned(v_len));
           v_bfinal := '0';
         end if;
@@ -119,7 +123,7 @@ begin
       end if;
     end process;
 
-    osl_rdy <= '1' when int_current_index < 32 and int_block_bytes_to_send = 0 else '0';
+    osl_rdy <= '1' when buffer64.int_current_index < 32 and int_block_bytes_to_send = 0 else '0';
 
   else generate
     -- https://www.ietf.org/rfc/rfc1951.txt
@@ -144,7 +148,7 @@ begin
         end if;
 
         barrel_shifter.sl_valid_in <= '0';
-        int_current_index_d1 <= int_current_index; -- delay for barrel shifter
+        buffer64.int_current_index_d1 <= buffer64.int_current_index; -- delay for barrel shifter
 
         case state is
           when IDLE =>
@@ -156,7 +160,7 @@ begin
             barrel_shifter.slv_data_in <= revert_vector(std_logic_vector(to_unsigned(C_BTYPE, 2)) & '1') & "0000000000";
             barrel_shifter.int_bits <= 3;
             barrel_shifter.sl_descending <= '0'; -- 0 if revert_vector() is used
-            int_current_index <= int_current_index + 3;
+            buffer64.int_current_index <= buffer64.int_current_index + 3;
 
             state <= WAIT_FOR_INPUT;
 
@@ -192,7 +196,7 @@ begin
             barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(v_int_code, 13));
             barrel_shifter.int_bits <= v_int_bitwidth;
             barrel_shifter.sl_descending <= '1';
-            int_current_index <= int_current_index + v_int_bitwidth;
+            buffer64.int_current_index <= buffer64.int_current_index + v_int_bitwidth;
 
             state <= SEND_BYTES;
 
@@ -253,13 +257,13 @@ begin
               v_int_bitwidth := 8;
             end if;
 
-            report "LENGTH_CODE " & to_string(int_current_index) & " " & to_string(v_int_code);
+            report "LENGTH_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_int_code);
 
             barrel_shifter.sl_valid_in <= '1';
             barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(v_int_code, 13));
             barrel_shifter.int_bits <= v_int_bitwidth;
             barrel_shifter.sl_descending <= '1';
-            int_current_index <= int_current_index + v_int_bitwidth;
+            buffer64.int_current_index <= buffer64.int_current_index + v_int_bitwidth;
 
             -- no extra bits for lengths <= 10
             -- will save one cycle in EXTRA_LENGTH_BITS
@@ -290,7 +294,7 @@ begin
             end if;
 
             report "EXTRA_LENGTH_BITS " &
-              to_string(int_current_index) & " " &
+              to_string(buffer64.int_current_index) & " " &
               to_string(v_int_match_length) & " " &
               to_string(v_int_start_value);
 
@@ -298,7 +302,7 @@ begin
             barrel_shifter.slv_data_in <= revert_vector(std_logic_vector(to_unsigned(v_int_match_length - v_int_start_value, 13)));
             barrel_shifter.int_bits <= v_int_bitwidth;
             barrel_shifter.sl_descending <= '0';
-            int_current_index <= int_current_index + v_int_bitwidth;
+            buffer64.int_current_index <= buffer64.int_current_index + v_int_bitwidth;
 
             state <= DISTANCE_CODE;
 
@@ -365,13 +369,13 @@ begin
               assert false report "invalid distance" & to_string(v_int_match_distance);
             end if;
 
-            report "DISTANCE_CODE " & to_string(int_current_index) & " " & to_string(v_int_code);
+            report "DISTANCE_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_int_code);
 
             barrel_shifter.sl_valid_in <= '1';
             barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(v_int_code, 13));
             barrel_shifter.int_bits <= 5;
             barrel_shifter.sl_descending <= '1';
-            int_current_index <= int_current_index + 5;
+            buffer64.int_current_index <= buffer64.int_current_index + 5;
 
             -- no extra bits for distance <= 4
             -- will save one cycle in EXTRA_DISTANCE_BITS
@@ -426,7 +430,7 @@ begin
             end if;
 
             report "EXTRA_DISTANCE_BITS " &
-              to_string(int_current_index) & " " &
+              to_string(buffer64.int_current_index) & " " &
               to_string(v_int_bitwidth) & " " &
               to_string(v_int_match_length) & " " &
               to_string(v_int_start_value);
@@ -435,7 +439,7 @@ begin
             barrel_shifter.slv_data_in <= revert_vector(std_logic_vector(to_unsigned(v_int_match_distance - v_int_start_value, 13)));
             barrel_shifter.int_bits <= v_int_bitwidth;
             barrel_shifter.sl_descending <= '0';
-            int_current_index <= int_current_index + v_int_bitwidth;
+            buffer64.int_current_index <= buffer64.int_current_index + v_int_bitwidth;
 
             state <= SEND_BYTES;
 
@@ -446,27 +450,27 @@ begin
               barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
               barrel_shifter.int_bits <= 7;
               barrel_shifter.sl_descending <= '1';
-              int_current_index <= int_current_index + 7;
+              buffer64.int_current_index <= buffer64.int_current_index + 7;
 
               sl_flush_increment_index <= '0';
               sl_valid_out <= '0';
-            elsif int_current_index >= 8 then
-              if int_current_index_d1 >= int_current_index then -- wait until the counts are synched
+            elsif buffer64.int_current_index >= 8 then
+              if buffer64.int_current_index_d1 >= buffer64.int_current_index then -- wait until the counts are synched
                 sl_valid_out <= '1';
-                int_current_index <= int_current_index - 8;
-                slv_data_out <= revert_vector(slv_64_bit_buffer(int_current_index - 1 downto int_current_index - 8));
+                buffer64.int_current_index <= buffer64.int_current_index - 8;
+                slv_data_out <= revert_vector(buffer64.slv_data(buffer64.int_current_index - 1 downto buffer64.int_current_index - 8));
               else
                 sl_valid_out <= '0';
               end if;
-            elsif int_current_index > 0 and sl_flush = '1' then
+            elsif buffer64.int_current_index > 0 and sl_flush = '1' then
               sl_valid_out <= '0';
               sl_flush <= '0';
               -- pad zeros (for full byte) at the end
               barrel_shifter.sl_valid_in <= '1';
               barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
-              barrel_shifter.int_bits <= 8-int_current_index;
+              barrel_shifter.int_bits <= 8-buffer64.int_current_index;
               barrel_shifter.sl_descending <= '1';
-              int_current_index <= int_current_index + 8-int_current_index;
+              buffer64.int_current_index <= buffer64.int_current_index + 8-buffer64.int_current_index;
             else
               if sl_bfinal = '1' then
                 sl_bfinal <= '0';
@@ -487,14 +491,14 @@ begin
     begin
       if rising_edge(isl_clk) then
         if barrel_shifter.sl_valid_in = '1' then
-          slv_64_bit_buffer(slv_64_bit_buffer'HIGH downto barrel_shifter.int_bits) <=
-            slv_64_bit_buffer(slv_64_bit_buffer'HIGH - barrel_shifter.int_bits downto 0);
+          buffer64.slv_data(buffer64.slv_data'HIGH downto barrel_shifter.int_bits) <=
+            buffer64.slv_data(buffer64.slv_data'HIGH - barrel_shifter.int_bits downto 0);
           if barrel_shifter.sl_descending = '1' then
-            slv_64_bit_buffer(barrel_shifter.int_bits-1 downto 0) <= barrel_shifter.slv_data_in(barrel_shifter.int_bits-1 downto 0);
+            buffer64.slv_data(barrel_shifter.int_bits-1 downto 0) <= barrel_shifter.slv_data_in(barrel_shifter.int_bits-1 downto 0);
           else
             -- After reverting the bits, the important bits are at the other end of the slv.
             -- I. e. starting at barrel_shifter.slv_data_in'HIGH, not 0.
-            slv_64_bit_buffer(barrel_shifter.int_bits-1 downto 0) <= barrel_shifter.slv_data_in(barrel_shifter.slv_data_in'HIGH downto barrel_shifter.slv_data_in'HIGH-barrel_shifter.int_bits+1);
+            buffer64.slv_data(barrel_shifter.int_bits-1 downto 0) <= barrel_shifter.slv_data_in(barrel_shifter.slv_data_in'HIGH downto barrel_shifter.slv_data_in'HIGH-barrel_shifter.int_bits+1);
           end if;
         end if;
       end if;

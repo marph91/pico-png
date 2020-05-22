@@ -135,10 +135,9 @@ begin
                v_int_code,
                v_int_start_value,
                v_int_match_distance : integer := 0;
-      -- The following variable is used only to get truncated and 
-      -- forwarded to the barrel shifter. This has to be done, because
-      -- to_unsigned() needs a constant bitwidth parameter, i. e. 13.
-      variable v_slv_tmp_bits : std_logic_vector(12 downto 0);
+      -- only used to suppress a ghdl synthesis error
+      -- TODO: extract a MWE and report the bug
+      variable v_slv_data_out : std_logic_vector(7 downto 0);
     begin
       if rising_edge(isl_clk) then
         if isl_flush = '1' then
@@ -458,7 +457,8 @@ begin
               if buffer64.int_current_index_d1 >= buffer64.int_current_index then -- wait until the counts are synched
                 sl_valid_out <= '1';
                 buffer64.int_current_index <= buffer64.int_current_index - 8;
-                slv_data_out <= revert_vector(buffer64.slv_data(buffer64.int_current_index - 1 downto buffer64.int_current_index - 8));
+                v_slv_data_out := buffer64.slv_data(buffer64.int_current_index - 1 downto buffer64.int_current_index - 8);
+                slv_data_out <= revert_vector(v_slv_data_out);
               else
                 sl_valid_out <= '0';
               end if;

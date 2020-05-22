@@ -256,7 +256,7 @@ begin
             state <= HEADERS;
             sl_valid_out <= '0';
             int_index <= slv_full_header'LENGTH / 8;
-            -- TODO: padding to 32 bit at the end needed?
+
             slv_full_header <= C_PNG_HEADER & C_IHDR & std_logic_vector(to_unsigned(int_idat_length, 32)) & C_IDAT_TYPE & x"000000";
           end if;
 

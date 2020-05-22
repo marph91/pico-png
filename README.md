@@ -1,5 +1,8 @@
 # pico-png
 
+[![testsuite](https://github.com/marph91/pico-png/workflows/tests/badge.svg)](https://github.com/marph91/pico-png/actions?query=workflow%3Atests)
+[![synthesis](https://github.com/marph91/pico-png/workflows/synthesis/badge.svg)](https://github.com/marph91/pico-png/actions?query=workflow%3Asynthesis)
+
 `pico-png` is a VHDL implementation of a PNG encoder, as specified in ISO/IEC 15948:2003, RFC1950 and RFC1951.
 
 ## Interface

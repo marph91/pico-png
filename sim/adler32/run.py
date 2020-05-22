@@ -34,14 +34,11 @@ def generate_data(root, name, input_data):
         outfile.write(str(output_data))
 
 
-def create_test_suite(ui):
+def create_test_suite(tb_lib):
     root = dirname(__file__)
     os.makedirs(join(root, "gen"), exist_ok=True)
 
-    ui.add_array_util()
-    unittest = ui.add_library("unittest", allow_duplicate=True)
-    unittest.add_source_files(join(root, "tb_adler32.vhd"))
-    tb_adler32 = unittest.entity("tb_adler32")
+    tb_adler32 = tb_lib.entity("tb_adler32")
 
     Case = namedtuple("Case", ["name", "data_in"])
     testcases = [
@@ -65,9 +62,3 @@ def create_test_suite(ui):
         tb_adler32.add_config(
             name=case.name, generics=generics,
             pre_config=generate_data(root, case.name, case.data_in))
-
-
-if __name__ == "__main__":
-    UI = VUnit.from_argv()
-    create_test_suite(UI)
-    UI.main()

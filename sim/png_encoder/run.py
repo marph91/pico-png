@@ -105,14 +105,11 @@ def get_depth(color_type: int) -> int:
     raise ValueError(f"invalid color type {color_type}")
 
 
-def create_test_suite(ui):
+def create_test_suite(tb_lib):
     root = dirname(__file__)
     os.makedirs(join(root, "gen"), exist_ok=True)
 
-    ui.add_array_util()
-    unittest = ui.add_library("unittest", allow_duplicate=True)
-    unittest.add_source_files(join(root, "tb_png_encoder.vhd"))
-    tb_deflate = unittest.entity("tb_png_encoder")
+    tb_deflate = tb_lib.entity("tb_png_encoder")
 
     # TODO: simplify test case generation (also use dataclasses, when
     #       python 3.7 is available at opensuse)
@@ -176,9 +173,3 @@ def create_test_suite(ui):
             post_check=functools.partial(
                 assemble_and_check_png, root, input_bytes, id_,
                 case.width, case.depth))
-
-
-if __name__ == "__main__":
-    UI = VUnit.from_argv()
-    create_test_suite(UI)
-    UI.main()

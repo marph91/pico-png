@@ -19,14 +19,11 @@ def create_stimuli(root, name, input_data, output_data):
         outfile.write(", ".join(map(str, output_data)))
 
 
-def create_test_suite(ui):
+def create_test_suite(tb_lib):
     root = dirname(__file__)
     os.makedirs(join(root, "gen"), exist_ok=True)
 
-    ui.add_array_util()
-    unittest = ui.add_library("unittest", allow_duplicate=True)
-    unittest.add_source_files(join(root, "tb_lz77.vhd"))
-    tb_lz77 = unittest.entity("tb_lz77")
+    tb_lz77 = tb_lib.entity("tb_lz77")
 
     # https://de.wikipedia.org/wiki/LZ77
     # https://de.wikibooks.org/wiki/Datenkompression:_Verlustfreie_Verfahren:_W%C3%B6rterbuchbasierte_Verfahren:_LZ77
@@ -78,9 +75,3 @@ def create_test_suite(ui):
             name=case.name, generics=generics,
             pre_config=create_stimuli(root, case.name, case.data_in,
                                       case.data_out))
-
-
-if __name__ == "__main__":
-    UI = VUnit.from_argv()
-    create_test_suite(UI)
-    UI.main()

@@ -18,14 +18,11 @@ def create_stimuli(root, name, input_data, output_data):
         outfile.write(", ".join(map(str, output_data)))
 
 
-def create_test_suite(ui):
+def create_test_suite(tb_lib):
     root = dirname(__file__)
     os.makedirs(join(root, "gen"), exist_ok=True)
 
-    ui.add_array_util()
-    unittest = ui.add_library("unittest", allow_duplicate=True)
-    unittest.add_source_files(join(root, "tb_lzss.vhd"))
-    tb_lzss = unittest.entity("tb_lzss")
+    tb_lzss = tb_lib.entity("tb_lzss")
 
     # https://de.wikibooks.org/wiki/Datenkompression:_Verlustfreie_Verfahren:_W%C3%B6rterbuchbasierte_Verfahren:_LZSS
     # J. Storer, T.Szymanski. Data Compression via Textual Substitution.
@@ -77,9 +74,3 @@ def create_test_suite(ui):
             name=case.name, generics=generics,
             pre_config=create_stimuli(root, case.name, case.data_in,
                                       case.data_out))
-
-
-if __name__ == "__main__":
-    UI = VUnit.from_argv()
-    create_test_suite(UI)
-    UI.main()

@@ -109,7 +109,6 @@ begin
       wait until rising_edge(sl_clk);
       sl_valid_in <= '0';
       wait until rising_edge(sl_clk);
-      wait until rising_edge(sl_clk);
     end loop;
 
     stimuli_done <= true;

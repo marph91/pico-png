@@ -12,8 +12,6 @@ import zlib
 
 from PIL import Image
 
-from vunit import VUnit
-
 
 def create_stimuli(root: str, name: str, input_data: List[int]):
     # write out csv only for debugging purposes
@@ -116,7 +114,7 @@ def create_test_suite(tb_lib):
     Case = namedtuple("Case", ["name", "width", "height", "depth", "ctype",
                                "btype", "row_filter", "data_in"])
     testcases = []
-    for width, height in ((1, 1), (4, 4), (12, 12), (60, 80)):
+    for width, height in ((4, 4), (12, 12), (60, 80)):
         for ctype in (0, 2, 4, 6):
             depth = get_depth(ctype)
 

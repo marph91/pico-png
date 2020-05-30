@@ -27,6 +27,14 @@ entity deflate is
 end;
 
 architecture behavioral of deflate is
+  function calc_huffman_bitwidth(constant btype : integer range 0 to 3) return integer is
+  begin
+    if btype = 0 then
+      return 8;
+    end if;
+    return 17;
+  end function;
+
   signal sl_valid_in_lzss : std_logic := '0';
   signal slv_data_in_lzss : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out_lzss : std_logic := '0';
@@ -68,7 +76,7 @@ begin
   i_huffman : entity png_lib.huffman
   generic map (
     C_BTYPE => C_BTYPE,
-    C_BITWIDTH => 8+9*C_BTYPE -- TODO: fix for C_BTYPE = 2
+    C_BITWIDTH => calc_huffman_bitwidth(C_BTYPE)
   )
   port map (
     isl_clk    => isl_clk,

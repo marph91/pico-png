@@ -7,6 +7,7 @@ import importlib.util
 import os
 import resource
 
+import random
 from vunit import VUnit
 
 
@@ -39,6 +40,8 @@ def create_test_suites(prj):
 
 
 if __name__ == "__main__":
+    random.seed(42)
+
     os.environ["VUNIT_SIMULATOR"] = "ghdl"
 
     # Modify the stack size limit in order to avoid a stack overflow when

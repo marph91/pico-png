@@ -1,6 +1,6 @@
 """Test cases for the png_encoder module."""
 
-from collections import namedtuple
+import dataclasses
 import functools
 import io
 import itertools
@@ -89,18 +89,46 @@ def assemble_and_check_png(root, input_data, name, width, depth):
     return list(input_data) == reconstructed_data
 
 
-def get_depth(color_type: int) -> int:
-    if color_type == 0:
-        return 1  # gray
-    elif color_type == 2:
-        return 3  # RGB
-    elif color_type == 3:
-        return 1  # palette (TODO: is this correct?)
-    elif color_type == 4:
-        return 2  # gray with alpha
-    elif color_type == 6:
-        return 4  # RGB with alpha
-    raise ValueError(f"invalid color type {color_type}")
+@dataclasses.dataclass
+class Testcase:
+    name: str
+    width: int
+    height: int
+    color_type: int
+    block_type: int
+    row_filter: int
+
+    def __post_init__(self):
+        # assign data_in only once, because random values are used
+        range_ = range(self.height * self.width * self.depth)
+        if self.name == "increment":
+            self.data_in = [i % 256 for i in range_]
+        elif self.name == "ones":
+            self.data_in = [1 for _ in range_]
+        elif self.name == "random":
+            self.data_in = [randint(0, 255) for _ in range_]
+        else:
+            raise ValueError(f"invalid name {self.name}")
+
+    @property
+    def id_(self) -> str:
+        return (f"{self.name}_{self.width}x{self.height}_"
+                f"row_filter_{self.row_filter}_color_{self.color_type}_"
+                f"btype_{self.block_type}")
+
+    @property
+    def depth(self) -> int:
+        if self.color_type == 0:
+            return 1  # gray
+        elif self.color_type == 2:
+            return 3  # RGB
+        elif self.color_type == 3:
+            return 1  # palette (TODO: is this correct?)
+        elif self.color_type == 4:
+            return 2  # gray with alpha
+        elif self.color_type == 6:
+            return 4  # RGB with alpha
+        raise ValueError(f"invalid color type {self.color_type}")
 
 
 def create_test_suite(tb_lib):
@@ -109,65 +137,43 @@ def create_test_suite(tb_lib):
 
     tb_deflate = tb_lib.entity("tb_png_encoder")
 
-    # TODO: simplify test case generation (also use dataclasses, when
-    #       python 3.7 is available at opensuse)
-    Case = namedtuple("Case", ["name", "width", "height", "depth", "ctype",
-                               "btype", "row_filter", "data_in"])
     testcases = []
-    for width, height in ((4, 4), (12, 12), (60, 80)):
-        for ctype in (0, 2, 4, 6):
-            depth = get_depth(ctype)
+    for name, img_size, color_type, block_type, row_filter in itertools.product(
+            ("increment", "ones", "random"), ((4, 4), (12, 12), (60, 80)),
+            (0, 2, 4, 6), (0, 1), (0, 1)):
+        if row_filter != 0 and img_size != (12, 12):
+            continue  # skip some tests to reduce execution time
 
-            for row_filter, btype in itertools.product((0, 1), (0, 1)):
-                if row_filter != 0 and width != 12 and height != 12:
-                    continue  # skip some tests to reduce execution time
-
-                testcases.extend([
-                    Case("increment", width, height, depth, ctype, btype,
-                         row_filter,
-                         [i % 256 for i in range(height*width*depth)]),
-                    Case("ones", width, height, depth, ctype, btype,
-                         row_filter, [1 for _ in range(height*width*depth)]),
-                    Case("random", width, height, depth, ctype, btype,
-                         row_filter,
-                         [randint(0, 255) for _ in range(height*width*depth)]),
-                ])
+        testcases.extend([
+            Testcase(name, *img_size, color_type, block_type, row_filter),
+        ])
 
     # regression
     testcases.extend([
-        Case("ones", 3, 5, 3, 2, 1, 0, [1 for _ in range(3*5*3)]),
-        Case("ones", 5, 3, 2, 4, 1, 0, [1 for _ in range(5*3*2)]),
+        Testcase("ones", 3, 5, 2, 1, 0),
+        Testcase("ones", 5, 3, 4, 1, 0),
     ])
 
     # comparison to https://ipbloq.files.wordpress.com/2017/09/ipb-png-e-pb.pdf
-    height = 800
-    width = 480
-    ctype = 2
-    depth = get_depth(ctype)
-    testcases.extend([
-        Case("ones", height, width, depth, ctype, 1, 0,
-             [1 for _ in range(height*width*depth)]),
-    ])
+    testcases.append(Testcase("ones", 800, 480, 2, 1, 0))
 
     for case in testcases:
         input_bytes = bytearray(case.data_in)
 
-        id_ = (f"{case.name}_{case.width}x{case.height}_row_filter_"
-               f"{case.row_filter}_color_{case.ctype}_btype_{case.btype}")
         generics = {
-            "id": id_,
+            "id": case.id_,
             "C_IMG_WIDTH": case.width,
             "C_IMG_HEIGHT": case.height,
             "C_IMG_BIT_DEPTH": 8,
-            "C_COLOR_TYPE": case.ctype,
+            "C_COLOR_TYPE": case.color_type,
             "C_INPUT_BUFFER_SIZE": 12,
             "C_SEARCH_BUFFER_SIZE": 12,
-            "C_BTYPE": case.btype,
+            "C_BTYPE": case.block_type,
             "C_ROW_FILTER_TYPE": case.row_filter,
         }
         tb_deflate.add_config(
-            name=id_, generics=generics,
-            pre_config=create_stimuli(root, id_, case.data_in),
+            name=case.id_, generics=generics,
+            pre_config=create_stimuli(root, case.id_, case.data_in),
             post_check=functools.partial(
-                assemble_and_check_png, root, input_bytes, id_,
+                assemble_and_check_png, root, input_bytes, case.id_,
                 case.width, case.depth))

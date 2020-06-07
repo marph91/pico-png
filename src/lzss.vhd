@@ -43,7 +43,7 @@ architecture behavioral of lzss is
   signal state : t_states := IDLE;
 
   signal int_datums_to_fill : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
-  signal int_start_index : integer range 1 to C_SEARCH_BUFFER_SIZE+1 := 0;
+  signal int_start_index : integer range 1 to C_SEARCH_BUFFER_SIZE+1 := 1;
   signal sl_valid_out : std_logic := '0';
   signal sl_found_match : std_logic := '0';
 

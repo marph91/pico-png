@@ -14,8 +14,8 @@ use util.png_pkg.all;
 
 entity png_encoder is
   generic (
-    C_IMG_WIDTH          : integer := 8;
-    C_IMG_HEIGHT         : integer := 8;
+    C_IMG_WIDTH          : integer := 800;
+    C_IMG_HEIGHT         : integer := 480;
 
     -- allowed bit depths, depending on color type: 1, 2, 4, 8, 16
     C_IMG_BIT_DEPTH      : integer range 1 to 16 := 8;
@@ -27,7 +27,7 @@ entity png_encoder is
     -- 4: greyscale with alpha
     -- 5: invalid
     -- 6: truecolor with alpha
-    C_COLOR_TYPE         : integer range 0 to 6 := 0;
+    C_COLOR_TYPE         : integer range 0 to 6 := 2;
 
     C_INPUT_BUFFER_SIZE  : integer range 3 to 258 := 12;
     C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
@@ -85,16 +85,20 @@ architecture behavioral of png_encoder is
 
   constant C_IMG_DEPTH : integer range 1 to 4 := get_img_depth(C_COLOR_TYPE);
 
-  -- other signals
-  type t_states is (IDLE, INIT_IDAT_CRC32, HEADERS, INIT_ROW_FILTER, ZLIB, IDAT_CRC, IEND);
-  signal state : t_states;
+  -- row_filter
+  signal sl_start_row_filter : std_logic := '0';
+  signal sl_valid_out_row_filter : std_logic := '0';
+  signal slv_data_out_row_filter : std_logic_vector(7 downto 0) := (others => '0');
+  signal sl_rdy_row_filter : std_logic := '0';
 
   -- zlib
   signal sl_valid_in_zlib : std_logic := '0';
   signal slv_data_in_zlib : std_logic_vector(7 downto 0) := (others => '0');
   signal slv_data_out_zlib : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out_zlib : std_logic := '0';
+  signal sl_start_zlib : std_logic := '0';
   signal sl_rdy_zlib : std_logic := '0';
+  signal sl_finish_zlib : std_logic := '0';
 
   -- idat chunk
   signal sl_valid_in_crc32 : std_logic := '0';
@@ -106,19 +110,14 @@ architecture behavioral of png_encoder is
   signal sl_valid_out : std_logic := '0';
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_finish : std_logic := '0';
+  signal sl_flush, sl_flush_d1 : std_logic := '0';
 
+  -- internal
+  type t_states is (IDLE, INIT_IDAT_CRC32, HEADERS, INIT_ROW_FILTER, ZLIB, IDAT_CRC, IEND);
+  signal state : t_states;
   signal int_channel_cnt : integer range 0 to C_IMG_DEPTH := 0;
   signal int_pixel_cnt : integer range 0 to C_IMG_WIDTH*C_IMG_HEIGHT := 0;
   signal int_index : integer range 0 to 44 := 0;
-
-  signal sl_flush, sl_flush_d1 : std_logic := '0';
-  signal sl_finish_zlib : std_logic := '0';
-  signal sl_start_zlib : std_logic := '0';
-
-  signal sl_start_row_filter : std_logic := '0';
-  signal sl_valid_out_row_filter : std_logic := '0';
-  signal slv_data_out_row_filter : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_rdy_row_filter : std_logic := '0';
 
 begin
   i_row_filter : entity png_lib.row_filter

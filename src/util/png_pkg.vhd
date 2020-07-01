@@ -160,6 +160,9 @@ package body png_pkg is
     v_s2 := to_integer(unsigned(start_value(31 downto 16)));
 
     for byte in data'LENGTH / 8 - 1 downto 0 loop
+      -- TODO: Check for alternative modulo function, since the implementation differs between vendors.
+      -- All tried approaches had worse ressource usage. For alternatives, see:
+      -- https://stackoverflow.com/questions/2773628/better-ways-to-implement-a-modulo-operation-algorithm-question
       v_current_byte := to_integer(unsigned(data((byte+1) * 8 - 1 downto byte * 8)));
       v_s1 := (v_s1 + v_current_byte) mod 65521;
       v_s2 := (v_s2 + v_s1) mod 65521;

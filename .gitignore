@@ -3,6 +3,8 @@ __pycache__
 .mypy_cache
 gen
 build
+sim_build
+.cocotb-results
 test_scripts
 vivado
 vunit_out

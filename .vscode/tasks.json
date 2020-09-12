@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run vunit",
+            "command": "./run_all.py",
+            "args": [
+                "-p4"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/sim"
+            }
+        },
+        {
+            "label": "Clean vunit",
+            "command": "rm",
+            "args": [
+                "-rf",
+                "${workspaceFolder}/sim/vunit_out"
+            ],
+        },
+        {
+            "label": "Run cocotb",
+            "command": "pytest",
+            "args": [
+                "-s",
+                // "--junitxml=test-results.xml",
+                // "--cocotbxml=test-cocotb.xml"
+                // "--workers",
+                // "auto"
+                "-n",
+                "auto"
+            ],
+        },
+    ]
+}

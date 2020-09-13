@@ -12,8 +12,13 @@ library util;
 use util.math_pkg.all;
 use util.png_pkg.all;
 
+library vunit_lib;
+context vunit_lib.vunit_context;
+
 entity png_encoder is
   generic (
+    runner_cfg           : string := "";  -- only needed for testing
+
     C_IMG_WIDTH          : integer := 800;
     C_IMG_HEIGHT         : integer := 480;
 
@@ -121,6 +126,13 @@ architecture behavioral of png_encoder is
   signal int_index : integer range 0 to 44 := 0;
 
 begin
+  -- main : process
+  -- begin
+  --   test_runner_setup(runner, runner_cfg);
+  --   report "Hello world!";
+  --   test_runner_cleanup(runner); -- Simulation ends here
+  -- end process;
+
   i_row_filter : entity png_lib.row_filter
   generic map (
     C_IMG_WIDTH => C_IMG_WIDTH,

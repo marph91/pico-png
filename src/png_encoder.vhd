@@ -111,6 +111,7 @@ architecture behavioral of png_encoder is
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_finish : std_logic := '0';
   signal sl_flush, sl_flush_d1 : std_logic := '0';
+  signal isl_valid_d1 : std_logic := '0';
 
   -- internal
   type t_states is (IDLE, INIT_IDAT_CRC32, HEADERS, INIT_ROW_FILTER, ZLIB, IDAT_CRC, IEND);
@@ -188,6 +189,7 @@ begin
       end if;
 
       sl_flush_d1 <= sl_flush;
+      isl_valid_d1 <= isl_valid;
 
       case state is
         when IDLE =>
@@ -277,6 +279,11 @@ begin
 
   osl_valid <= sl_valid_out;
   oslv_data <= slv_data_out;
-  osl_rdy <= sl_rdy_zlib and sl_rdy_row_filter when state = ZLIB else '0';
+  -- input data needs two cycles to lzss, because of row filter
+  osl_rdy <= (
+    not isl_valid and
+    not isl_valid_d1 and
+    sl_rdy_zlib and
+    sl_rdy_row_filter) when state = ZLIB else '0';
   osl_finish <= sl_finish;
 end behavioral;

@@ -76,13 +76,17 @@ begin
   begin
     wait until rising_edge(sl_clk);
     for i in 0 to width(data_src)-1 loop
-      wait until rising_edge(sl_clk) and sl_rdy = '1';
+      while sl_rdy = '0' loop
+        sl_valid_in <= '0';
+        wait until rising_edge(sl_clk);
+      end loop;
       report "### input: " & integer'image(i);
       sl_valid_in <= '1';
       slv_data_in <= std_logic_vector(to_unsigned(get(data_src, i, 0), slv_data_in'length));
       wait until rising_edge(sl_clk);
-      sl_valid_in <= '0';
     end loop;
+    sl_valid_in <= '0';
+    wait until rising_edge(sl_clk);
 
     -- flush the buffer at the end
     sl_flush <= '1';

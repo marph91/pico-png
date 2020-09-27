@@ -35,6 +35,12 @@ def create_test_suites(prj):
     os.environ["MODULE"] = "test_png_encoder_cocotb"
     os.environ["PYTHONPATH"] = "png_encoder"
 
+    # gprof2dot -f pstats test_profile.pstat | dot -Tpng -o output.png && display output.png
+    # os.environ["COCOTB_ENABLE_PROFILING"] = "1"
+
+    # https://stackoverflow.com/questions/15548023/clang-optimization-levels
+    prj.add_compile_option("ghdl.a_flags", ["-O3"])
+
 
 if __name__ == "__main__":
     random.seed(42)

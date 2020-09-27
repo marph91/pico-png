@@ -9,7 +9,6 @@ from PIL import Image
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.decorators import coroutine
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.monitors import Monitor
 from cocotb.regression import TestFactory
@@ -56,13 +55,13 @@ def check_png(input_data, png_bytes, width, depth):
     idat_length = int.from_bytes(png_bytes[idat_index - 4:idat_index], "big")
     idat_data = png_bytes[idat_index + 4:idat_index + 4 + idat_length]
 
-    print("debug info:")
-    print([hex(d) for d in idat_data])
-    print(["".join(reversed(bin(d)[2:].zfill(8))) for d in idat_data])
-    print("infgen command:\n",
-          "echo -n -e",
-          "".join(["\\\\x" + hex(d)[2:].zfill(2) for d in idat_data]),
-          "| ./infgen")
+    # print("debug info:")
+    # print([hex(d) for d in idat_data])
+    # print(["".join(reversed(bin(d)[2:].zfill(8))) for d in idat_data])
+    # print("infgen command:\n",
+    #       "echo -n -e",
+    #       "".join(["\\\\x" + hex(d)[2:].zfill(2) for d in idat_data]),
+    #       "| ./infgen")
 
     decoded_data = zlib.decompress(idat_data)
     # split the output into scanlines
@@ -74,8 +73,8 @@ def check_png(input_data, png_bytes, width, depth):
     for line in scanlines:
         reconstructed_data.extend(apply_filter(line))
 
-    print("input data:", input_data)
-    print("reconstructed data:", reconstructed_data)
+    # print("input data:", input_data)
+    # print("reconstructed data:", reconstructed_data)
     assert input_data == reconstructed_data
 
 
@@ -93,15 +92,6 @@ def generate_input_data(height, width, depth):
     return [1 for _ in range_]
     # raise ValueError("Unknown input type: ", input_type) # TODO: fix
 
-@cocotb.coroutine
-def clock_gen(signal):
-    """Generate the clock signal."""
-    while True:
-        signal <= 0
-        yield Timer(5000)  # ps
-        signal <= 1
-        yield Timer(5000)  # ps
-
 
 class OutputMonitor(Monitor):
     """Observes single input or output of DUT."""
@@ -113,14 +103,13 @@ class OutputMonitor(Monitor):
         self.output = []
         Monitor.__init__(self, callback, event)
 
-    @coroutine
-    def _monitor_recv(self):
+    async def _monitor_recv(self):
         clkedge = RisingEdge(self.clock)
 
         while True:
             # Capture signal at rising edge of clock
-            yield clkedge
-            if self.valid.value.integer == 1:
+            await clkedge
+            if self.valid.value.binstr == "1":
                 vec = self.signal.value.integer
                 # print(self.signal)
                 # print(vec)
@@ -140,10 +129,11 @@ def color_type_to_depth(color_type) -> int:
         return 4  # RGB with alpha
     raise ValueError(f"invalid color type {color_type}")
 
-@cocotb.coroutine
-def run_test(dut):
+
+async def run_test(dut):
     """Setup testbench and run a test."""
-    cocotb.fork(clock_gen(dut.isl_clk))
+    cocotb.fork(Clock(dut.isl_clk, 10, "ns").start(start_high=False))
+    clkedge = RisingEdge(dut.isl_clk)
 
     byte_depth = color_type_to_depth(dut.C_COLOR_TYPE.value.integer)
     input_data = generate_input_data(
@@ -157,23 +147,30 @@ def run_test(dut):
     dut.isl_valid <= 0
     dut.islv_data <= 0
     
-    yield RisingEdge(dut.isl_clk)
+    await clkedge
     dut.isl_start <= 1
-    yield RisingEdge(dut.isl_clk)
+    await clkedge
     dut.isl_start <= 0
 
     for input_value in input_data:
-        # print(input_value)
-        while dut.osl_rdy.value.integer != 1:
-            yield RisingEdge(dut.isl_clk)
+        while True:
+            await clkedge
+            if dut.osl_rdy.value.binstr == "1":
+                break
+        # while dut.osl_rdy.value.binstr != "1":
+        #     await clkedge
         dut.isl_valid <= 1
         dut.islv_data <= input_value
-        yield RisingEdge(dut.isl_clk)
+        await clkedge
         dut.isl_valid <= 0
-        yield RisingEdge(dut.isl_clk)
+        await clkedge
 
-    while dut.osl_finish.value.integer != 1:
-        yield RisingEdge(dut.isl_clk)
+    while True:
+        await clkedge
+        if dut.osl_finish.value.binstr == "1":
+            break
+    # while dut.osl_finish.value.binstr != "1":
+    #     await clkedge
 
     png_bytes = assemble_png(output_mon.output, "tmp")
     check_png(input_data, png_bytes, dut.C_IMG_WIDTH.value.integer, byte_depth)

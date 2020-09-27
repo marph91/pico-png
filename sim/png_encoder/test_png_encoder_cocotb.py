@@ -132,15 +132,14 @@ def color_type_to_depth(color_type) -> int:
 
 async def run_test(dut):
     """Setup testbench and run a test."""
-    cocotb.fork(Clock(dut.isl_clk, 10, "ns").start(start_high=False))
-    clkedge = RisingEdge(dut.isl_clk)
+    clkedge = RisingEdge(dut.i_png_encoder.isl_clk)
 
     byte_depth = color_type_to_depth(dut.C_COLOR_TYPE.value.integer)
     input_data = generate_input_data(
         dut.C_IMG_HEIGHT.value.integer,
         dut.C_IMG_WIDTH.value.integer,
         byte_depth)
-    output_mon = OutputMonitor("output", dut.oslv_data, dut.osl_valid, dut.isl_clk)
+    output_mon = OutputMonitor("output", dut.oslv_data, dut.osl_valid, dut.i_png_encoder.isl_clk)
 
     # init
     dut.isl_start <= 0

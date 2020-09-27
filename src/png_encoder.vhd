@@ -12,13 +12,8 @@ library util;
 use util.math_pkg.all;
 use util.png_pkg.all;
 
-library vunit_lib;
-context vunit_lib.vunit_context;
-
 entity png_encoder is
   generic (
-    runner_cfg           : string := "";  -- only needed for testing
-
     C_IMG_WIDTH          : integer := 800;
     C_IMG_HEIGHT         : integer := 480;
 

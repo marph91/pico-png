@@ -54,7 +54,7 @@ def create_test_suite(tb_lib):
     root = dirname(__file__)
     os.makedirs(join(root, "gen"), exist_ok=True)
 
-    tb_png_encoder = tb_lib.entity("png_encoder")
+    tb_png_encoder = tb_lib.entity("tb_png_encoder")
 
     testcases = []
     for name, img_size, color_type, block_type, row_filter in itertools.product(

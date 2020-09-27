@@ -16,10 +16,13 @@ from vunit import VUnit
 def create_test_suites(prj):
     root = os.path.dirname(__file__)
 
+    sim_lib = prj.add_library("sim")
+    sim_lib.add_source_files("vunit_common_pkg.vhd")
     util_lib = prj.add_library("util")
     util_lib.add_source_files("../src/util/*.vhd")
     png_lib = prj.add_library("png_lib")
     png_lib.add_source_files("../src/*.vhd")
+    png_lib.add_source_files("png_encoder/tb_png_encoder.vhd")
 
     run_scripts = glob(os.path.join(root, "*", "test_png_encoder.py"))
     for run_script in run_scripts:

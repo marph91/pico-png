@@ -1,0 +1,7 @@
+[libraries]
+util.files = [
+  "src/util/*.vhd",
+]
+png_lib.files = [
+  "src/*.vhd",
+]

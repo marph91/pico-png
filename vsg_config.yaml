@@ -1,0 +1,35 @@
+file_list:
+  - src/*.vhd
+  - src/util/*.vhd
+rule:
+  global:
+    indentSize: 2
+  constant_004: # names
+    case: upper
+  constant_015: # prefix
+    disable: false
+    prefixes: ["C_"]
+  generic_007: # names
+    case: upper
+  generic_020: # prefix
+    disable: false
+    prefixes: ["C_"]
+  instantiation_011: # port names
+    case: lower
+  instantiation_016: # generic names
+    case: upper
+  length_001:
+    length: 180
+  port_010: # names
+    case: lower
+  port_011: # prefix
+    disable: false
+    prefixes: ["i", "o"]
+  process_029: # allow rising_edge
+    disable: true
+  signal_007: # default initialization
+    disable: true
+  subtype_004: # prefix
+    disable: false
+  type_015: # prefix
+    disable: false

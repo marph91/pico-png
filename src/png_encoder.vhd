@@ -176,7 +176,7 @@ begin
       slv_data_in_crc32 <= slv_data_out_zlib;
 
       if isl_valid = '1' then
-        if int_channel_cnt < C_IMG_DEPTH - 1 then
+        if int_channel_cnt /= C_IMG_DEPTH - 1 then
           int_channel_cnt <= int_channel_cnt + 1;
         else
           int_channel_cnt <= 0;
@@ -200,7 +200,7 @@ begin
           end if;
 
         when INIT_IDAT_CRC32 =>
-          if int_index > 0 then
+          if int_index /= 0 then
             sl_valid_in_crc32 <= '1';
             slv_data_in_crc32 <= C_IDAT_TYPE(int_index*8-1 downto (int_index-1)*8);
             int_index <= int_index - 1;
@@ -238,7 +238,7 @@ begin
           end if;
 
         when IDAT_CRC =>
-          if int_index > 0 then
+          if int_index /= 0 then
             int_index <= int_index - 1;
             slv_data_out <= slv_data_out_crc32(int_index*8-1 downto (int_index-1)*8);
             sl_valid_out <= '1';
@@ -249,7 +249,7 @@ begin
           end if;
 
         when IEND =>
-          if int_index > 0 then
+          if int_index /= 0 then
             slv_data_out <= C_IEND(int_index*8-1 downto (int_index-1)*8);
             sl_valid_out <= '1';
             int_index <= int_index - 1;
@@ -264,7 +264,7 @@ begin
         when HEADERS =>
           -- send headers last, because length of idat is needed,
           -- which can be obtained only after all data got received
-          if int_index > 0 then
+          if int_index /= 0 then
             slv_data_out <= slv_full_header(int_index*8-1 downto (int_index-1)*8);
             sl_valid_out <= '1';
             int_index <= int_index - 1;

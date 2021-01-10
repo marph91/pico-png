@@ -83,17 +83,17 @@ begin
           sl_rdy <= '1';
 
           if isl_valid = '1' then
-            if int_channel_cnt < C_IMG_DEPTH-1 then
+            if int_channel_cnt /= C_IMG_DEPTH - 1 then
               int_channel_cnt <= int_channel_cnt + 1;
             else
               int_channel_cnt <= 0;
-              if int_column_cnt < C_IMG_WIDTH-1 then
+              if int_column_cnt /= C_IMG_WIDTH - 1 then
                 int_column_cnt <= int_column_cnt + 1;
               else
                 int_column_cnt <= 0;
                 sl_rdy <= '0';
 
-                if int_row_cnt < C_IMG_HEIGHT-1 then
+                if int_row_cnt /= C_IMG_HEIGHT - 1 then
                   state <= DELAY;
                   int_delay <= 2;
 
@@ -110,7 +110,7 @@ begin
           sl_valid_out <= '0';
 
           -- delay for slower input to zlib compression
-          if int_delay > 0 then
+          if int_delay /= 0 then
             int_delay <= int_delay - 1;
           else
             state <= SEND_FILTER_TYPE;

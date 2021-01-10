@@ -94,7 +94,7 @@ begin
           end if;
 
           -- increment or change state if the whole buffer was inspected
-          if v_int_search_index < C_SEARCH_BUFFER_SIZE and v_int_search_index /= 0 and v_int_match_length < C_MAX_MATCH_LENGTH then
+          if v_int_search_index /= C_SEARCH_BUFFER_SIZE and v_int_search_index /= 0 and v_int_match_length < C_MAX_MATCH_LENGTH then
             int_start_index <= v_int_search_index+1;
           else
             state <= OUTPUT_MATCH;
@@ -114,5 +114,5 @@ begin
                std_logic_vector(to_unsigned(rec_best_match.int_offset, 12)) &
                rec_best_match.slv_next_datum;
   osl_valid <= sl_valid_out;
-  osl_rdy <= '1' when int_datums_to_fill > 0 else '0';
+  osl_rdy <= '1' when int_datums_to_fill /= 0 else '0';
 end behavioral;

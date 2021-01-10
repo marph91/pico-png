@@ -86,7 +86,7 @@ begin
       if rising_edge(isl_clk) then
         sl_finish <= '0';
 
-        if isl_valid = '0' and (buffer64.int_current_index >= 32 or (isl_flush = '1' and buffer64.int_current_index > 0)) then
+        if isl_valid = '0' and (buffer64.int_current_index >= 32 or (isl_flush = '1' and buffer64.int_current_index /= 0)) then
           if buffer64.int_current_index <= 32 and isl_flush = '1' then
             v_bfinal := '1';
             sl_bfinal <= '1';
@@ -108,7 +108,7 @@ begin
           v_bfinal := '0';
         end if;
 
-        if int_block_bytes_to_send > 0 then
+        if int_block_bytes_to_send /= 0 then
           sl_valid_out <= '1';
           int_block_bytes_to_send <= int_block_bytes_to_send - 1;
           slv_data_out <= slv_block_data(slv_block_data'HIGH downto slv_block_data'HIGH-7);
@@ -462,7 +462,7 @@ begin
               else
                 sl_valid_out <= '0';
               end if;
-            elsif buffer64.int_current_index > 0 and sl_flush = '1' then
+            elsif buffer64.int_current_index /= 0 and sl_flush = '1' then
               sl_valid_out <= '0';
               sl_flush <= '0';
               -- pad zeros (for full byte) at the end

@@ -143,7 +143,7 @@ begin
             sl_valid_out <= '1';
             slv_data_out <= buffered_output(int_output_index - 1 downto int_output_index - 8);
             int_output_index <= int_output_index - 8;
-          elsif int_output_index > 0 then
+          elsif int_output_index /= 0 then
             -- TODO: check if this behaves correct
             -- fill the byte up with zeros
             buffered_output(7 downto 0) <= (others => '0');
@@ -156,7 +156,7 @@ begin
           end if;
 
         when ADLER32 =>
-          if int_output_index > 0 then
+          if int_output_index /= 0 then
             sl_valid_out <= '1';
             slv_data_out <= slv_data_adler32(int_output_index * 8 - 1 downto (int_output_index-1) * 8);
             int_output_index <= int_output_index - 1;

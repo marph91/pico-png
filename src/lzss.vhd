@@ -57,7 +57,7 @@ begin
     variable v_sl_max_length : std_logic := '0';
   begin
     if rising_edge(isl_clk) then
-      assert not (isl_valid = '1' and int_datums_to_flush > 0);
+      assert not (isl_valid = '1' and int_datums_to_flush /= 0);
       assert not (isl_valid = '1' and state /= FILL);
 
       osl_finish <= '0';
@@ -83,7 +83,7 @@ begin
           if int_datums_to_fill = 0 then
             state <= MATCH;
             rec_best_match <= (0, 0, a_buffer(0));
-          elsif int_datums_to_flush > 0 then
+          elsif int_datums_to_flush /= 0 then
             int_datums_to_fill <= int_datums_to_fill - 1;
             a_buffer <= a_buffer(a_buffer'LEFT-1 downto a_buffer'RIGHT) & "UUUUUUUU";
             int_datums_to_flush <= int_datums_to_flush - 1;
@@ -165,5 +165,5 @@ begin
                '1' & std_logic_vector(to_unsigned(rec_best_match.int_offset, 12)) &
                std_logic_vector(to_unsigned(rec_best_match.int_length, 4));
   osl_valid <= sl_valid_out;
-  osl_rdy <= '1' when int_datums_to_fill > 0 and isl_valid = '0' else '0';
+  osl_rdy <= '1' when int_datums_to_fill /= 0 and isl_valid = '0' else '0';
 end behavioral;

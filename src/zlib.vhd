@@ -125,10 +125,8 @@ begin
 
             -- sll needs more ressources
             -- buffered_output <= buffered_output sll 8;
-            buffered_output(buffered_output'HIGH downto 8) <=
-                                                              buffered_output(buffered_output'HIGH - 8 downto 0);
-            buffered_output(7 downto 0)                    <=
-                                                              slv_data_deflate(slv_data_deflate'HIGH downto slv_data_deflate'HIGH - 8 + 1);
+            buffered_output(buffered_output'HIGH downto 8) <= buffered_output(buffered_output'HIGH - 8 downto 0);
+            buffered_output(7 downto 0)                    <= slv_data_deflate(slv_data_deflate'HIGH downto slv_data_deflate'HIGH - 8 + 1);
 
             int_output_index <= int_output_index + 8;
           elsif (int_output_index >= 8) then

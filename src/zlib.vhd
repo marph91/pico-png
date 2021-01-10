@@ -1,33 +1,34 @@
 library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+  use ieee.std_logic_1164.all;
+  use ieee.numeric_std.all;
 
 library png_lib;
 
 library util;
-use util.math_pkg.all;
+  use util.math_pkg.all;
 
 entity zlib is
   generic (
-    C_INPUT_BUFFER_SIZE  : integer range 3 to 258 := 10;
+    C_INPUT_BUFFER_SIZE  : integer range 3 to 258   := 10;
     C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
 
-    C_BTYPE              : integer range 0 to 3 := 1
+    C_BTYPE : integer range 0 to 3 := 1
   );
   port (
-    isl_clk   : in std_logic;
-    isl_flush : in std_logic;
-    isl_start : in std_logic;
-    isl_valid : in std_logic;
-    islv_data : in std_logic_vector(7 downto 0);
-    oslv_data : out std_logic_vector(7 downto 0);
-    osl_valid : out std_logic;
-    osl_finish: out std_logic;
-    osl_rdy   : out std_logic
+    isl_clk    : in    std_logic;
+    isl_flush  : in    std_logic;
+    isl_start  : in    std_logic;
+    isl_valid  : in    std_logic;
+    islv_data  : in    std_logic_vector(7 downto 0);
+    oslv_data  : out   std_logic_vector(7 downto 0);
+    osl_valid  : out   std_logic;
+    osl_finish : out   std_logic;
+    osl_rdy    : out   std_logic
   );
-end;
+end entity zlib;
 
 architecture behavioral of zlib is
+
   -- CMF |  FLG
   -- 0x08 | .... - window buffer size = 0
   -- 0x78 | 0x01 - No Compression/low
@@ -45,132 +46,140 @@ architecture behavioral of zlib is
   constant C_FLG : std_logic_vector(7 downto 0) := x"01";
 
   -- only used if FDICT = '1'
-  constant C_DICTID : std_logic_vector(4*8-1 downto 0) := (others => '0');
+  constant C_DICTID : std_logic_vector(4 * 8 - 1 downto 0) := (others => '0');
 
-  signal sl_valid_deflate : std_logic := '0';
-  signal slv_data_deflate : std_logic_vector(7 downto 0) := (others => '0');
+  signal sl_valid_deflate                          : std_logic := '0';
+  signal slv_data_deflate                          : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_finish_deflate, sl_finish_deflate_save : std_logic := '0';
-  signal sl_rdy_deflate : std_logic := '0';
+  signal sl_rdy_deflate                            : std_logic := '0';
 
   signal slv_data_adler32 : std_logic_vector(31 downto 0) := (others => '0');
 
-  type t_states IS (IDLE, HEADERS, DEFLATE, FLUSH, ADLER32);
+  type t_states is (IDLE, HEADERS, DEFLATE, FLUSH, ADLER32);
+
   signal state : t_states;
 
   -- bitbuffer
-  signal int_output_index : integer;-- TODO: range 0 to 72 := 0;
-  signal buffered_output : std_logic_vector(99 downto 0) := (others => '0');
-  signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_valid_out : std_logic := '0';
+  signal int_output_index : integer; -- TODO: range 0 to 72 := 0;
+  signal buffered_output  : std_logic_vector(99 downto 0) := (others => '0');
+  signal slv_data_out     : std_logic_vector(7 downto 0) := (others => '0');
+  signal sl_valid_out     : std_logic := '0';
 
 begin
-  i_deflate: entity png_lib.deflate
-  generic map (
-    C_INPUT_BUFFER_SIZE => C_INPUT_BUFFER_SIZE,
-    C_SEARCH_BUFFER_SIZE => C_SEARCH_BUFFER_SIZE,
-    C_BTYPE => C_BTYPE
-  )
-  port map (
-    isl_clk         => isl_clk,
-    isl_flush       => isl_flush,
-    isl_valid       => isl_valid,
-    islv_data       => islv_data,
-    oslv_data       => slv_data_deflate,
-    osl_valid       => sl_valid_deflate,
-    osl_finish      => sl_finish_deflate,
-    osl_rdy         => sl_rdy_deflate
-  );
 
-  i_adler32: entity png_lib.adler32
-  generic map (
-    C_INPUT_BITWIDTH => islv_data'LENGTH
-  )
-  port map (
-    isl_clk   => isl_clk,
-    isl_start => isl_start,
-    isl_valid => isl_valid,
-    islv_data => islv_data,
-    oslv_data => slv_data_adler32
-  );
+  i_deflate : entity png_lib.deflate
+    generic map (
+      C_INPUT_BUFFER_SIZE  => C_INPUT_BUFFER_SIZE,
+      C_SEARCH_BUFFER_SIZE => C_SEARCH_BUFFER_SIZE,
+      C_BTYPE              => C_BTYPE
+    )
+    port map (
+      isl_clk    => isl_clk,
+      isl_flush  => isl_flush,
+      isl_valid  => isl_valid,
+      islv_data  => islv_data,
+      oslv_data  => slv_data_deflate,
+      osl_valid  => sl_valid_deflate,
+      osl_finish => sl_finish_deflate,
+      osl_rdy    => sl_rdy_deflate
+    );
 
-  proc_fsm: process(isl_clk)
+  i_adler32 : entity png_lib.adler32
+    generic map (
+      C_INPUT_BITWIDTH => islv_data'LENGTH
+    )
+    port map (
+      isl_clk   => isl_clk,
+      isl_start => isl_start,
+      isl_valid => isl_valid,
+      islv_data => islv_data,
+      oslv_data => slv_data_adler32
+    );
+
+  proc_fsm : process (isl_clk) is
   begin
-    if rising_edge(isl_clk) then
+
+    if (rising_edge(isl_clk)) then
       osl_finish <= '0';
 
-      if sl_finish_deflate = '1' then
+      if (sl_finish_deflate = '1') then
         sl_finish_deflate_save <= '1';
       end if;
 
       case state is
+
         when IDLE =>
           sl_valid_out <= '0';
-          if isl_start = '1' then
+          if (isl_start = '1') then
             state <= HEADERS;
           end if;
 
         when HEADERS =>
           buffered_output(15 downto 0) <= C_CMF & C_FLG;
-          int_output_index <= 16;
-          state <= DEFLATE;
+          int_output_index             <= 16;
+          state                        <= DEFLATE;
 
         when DEFLATE =>
-          if sl_valid_deflate = '1' then
+          if (sl_valid_deflate = '1') then
             sl_valid_out <= '0';
 
             -- sll needs more ressources
             -- buffered_output <= buffered_output sll 8;
             buffered_output(buffered_output'HIGH downto 8) <=
-              buffered_output(buffered_output'HIGH - 8 downto 0);
-            buffered_output(7 downto 0) <=
-              slv_data_deflate(slv_data_deflate'HIGH downto slv_data_deflate'HIGH - 8 + 1);
+                                                              buffered_output(buffered_output'HIGH - 8 downto 0);
+            buffered_output(7 downto 0)                    <=
+                                                              slv_data_deflate(slv_data_deflate'HIGH downto slv_data_deflate'HIGH - 8 + 1);
 
             int_output_index <= int_output_index + 8;
-          elsif int_output_index >= 8 then
-            sl_valid_out <= '1';
-            slv_data_out <= buffered_output(int_output_index - 1 downto int_output_index - 8);
+          elsif (int_output_index >= 8) then
+            sl_valid_out     <= '1';
+            slv_data_out     <= buffered_output(int_output_index - 1 downto int_output_index - 8);
             int_output_index <= int_output_index - 8;
-          elsif sl_finish_deflate_save = '1' then
-            state <= FLUSH;
-            sl_valid_out <= '0';
+          elsif (sl_finish_deflate_save = '1') then
+            state                  <= FLUSH;
+            sl_valid_out           <= '0';
             sl_finish_deflate_save <= '0';
           else
             sl_valid_out <= '0';
           end if;
 
         when FLUSH =>
-          if int_output_index >= 8 then
-            sl_valid_out <= '1';
-            slv_data_out <= buffered_output(int_output_index - 1 downto int_output_index - 8);
+          if (int_output_index >= 8) then
+            sl_valid_out     <= '1';
+            slv_data_out     <= buffered_output(int_output_index - 1 downto int_output_index - 8);
             int_output_index <= int_output_index - 8;
-          elsif int_output_index /= 0 then
+          elsif (int_output_index /= 0) then
             -- TODO: check if this behaves correct
             -- fill the byte up with zeros
             buffered_output(7 downto 0) <= (others => '0');
-            int_output_index <= 8;
-            sl_valid_out <= '0';
+            int_output_index            <= 8;
+            sl_valid_out                <= '0';
           else
-            sl_valid_out <= '0';
+            sl_valid_out     <= '0';
             int_output_index <= 4;
-            state <= ADLER32;
+            state            <= ADLER32;
           end if;
 
         when ADLER32 =>
-          if int_output_index /= 0 then
-            sl_valid_out <= '1';
-            slv_data_out <= slv_data_adler32(int_output_index * 8 - 1 downto (int_output_index-1) * 8);
+          if (int_output_index /= 0) then
+            sl_valid_out     <= '1';
+            slv_data_out     <= slv_data_adler32(int_output_index * 8 - 1 downto (int_output_index - 1) * 8);
             int_output_index <= int_output_index - 1;
           else
             sl_valid_out <= '0';
-            state <= IDLE;
-            osl_finish <= '1';
+            state        <= IDLE;
+            osl_finish   <= '1';
           end if;
 
       end case;
+
     end if;
-  end process;
+
+  end process proc_fsm;
 
   osl_valid <= sl_valid_out;
   oslv_data <= slv_data_out;
-  osl_rdy <= sl_rdy_deflate when (state = DEFLATE and int_output_index < 32) else '0';
-end behavioral;
+  osl_rdy   <= sl_rdy_deflate when (state = DEFLATE and int_output_index < 32) else
+               '0';
+
+end architecture behavioral;

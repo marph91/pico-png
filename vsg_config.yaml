@@ -14,10 +14,10 @@ rule:
   generic_020: # prefix
     disable: false
     prefixes: ["C_"]
-  instantiation_011: # port names
-    case: lower
-  instantiation_016: # generic names
+  generic_map_002: # generic names
     case: upper
+  instantiation_034: # allow entity instantiation
+     method: "entity"
   length_001:
     length: 180
   port_010: # names
@@ -25,6 +25,8 @@ rule:
   port_011: # prefix
     disable: false
     prefixes: ["i", "o"]
+  port_map_002: # port names
+    case: lower
   process_029: # allow rising_edge
     disable: true
   signal_007: # default initialization

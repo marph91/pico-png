@@ -7,7 +7,7 @@ library util;
 
 entity crc32 is
   generic (
-    C_INPUT_BITWIDTH : integer := 10
+    C_INPUT_BITWIDTH : integer := 8
   );
   port (
     isl_clk   : in    std_logic;

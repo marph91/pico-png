@@ -109,7 +109,7 @@ begin
         when MATCH =>
           -- find the index of the next matching element
           v_int_search_index := 0;
-          for current_index in a_buffer'HIGH downto 1 loop
+          for current_index in C_SEARCH_BUFFER_SIZE downto 1 loop
             if (a_buffer(current_index) = a_buffer(0) and current_index >= int_start_index) then
               v_int_search_index := current_index;
             end if;
@@ -139,7 +139,7 @@ begin
           end if;
 
           -- increment or change state if the whole buffer was inspected
-          if (v_int_search_index < C_SEARCH_BUFFER_SIZE + 1 and
+          if (v_int_search_index /= C_SEARCH_BUFFER_SIZE + 1 and
               v_int_search_index /= 0 and
               v_int_match_length < C_MAX_MATCH_LENGTH and
               sl_last_input = '0') then

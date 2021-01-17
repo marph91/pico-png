@@ -7,7 +7,7 @@ library util;
 
 entity adler32 is
   generic (
-    C_INPUT_BITWIDTH : integer range 1 to 32 := 10
+    C_INPUT_BITWIDTH : integer range 1 to 32 := 8
   );
   port (
     isl_clk   : in    std_logic;

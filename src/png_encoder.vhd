@@ -112,7 +112,7 @@ architecture behavioral of png_encoder is
   signal sl_valid_in_crc32  : std_logic := '0';
   signal slv_data_in_crc32  : std_logic_vector(7 downto 0) := (others => '0');
   signal slv_data_out_crc32 : std_logic_vector(4 * 8 - 1 downto 0) := (others => '0');
-  signal int_idat_length    : integer := 0;
+  signal int_idat_length    : integer range 0 to 2**31 - 1 := 0;
 
   -- interface
   signal sl_valid_out          : std_logic := '0';
@@ -126,8 +126,9 @@ architecture behavioral of png_encoder is
   type t_states is (IDLE, INIT_IDAT_CRC32, HEADERS, INIT_ROW_FILTER, ZLIB, IDAT_CRC, IEND);
 
   signal state           : t_states;
-  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH := 0;
-  signal int_pixel_cnt   : integer range 0 to C_IMG_WIDTH * C_IMG_HEIGHT := 0;
+  -- TODO: Do we need to assign these values with "isl_start"?
+  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1 := C_IMG_DEPTH - 1;
+  signal int_pixel_cnt   : integer range 0 to C_IMG_WIDTH * C_IMG_HEIGHT := C_IMG_WIDTH * C_IMG_HEIGHT;
   signal int_index       : integer range 0 to 44 := 0;
 
 begin
@@ -188,11 +189,11 @@ begin
       slv_data_in_crc32 <= slv_data_out_zlib;
 
       if (isl_valid = '1') then
-        if (int_channel_cnt /= C_IMG_DEPTH - 1) then
-          int_channel_cnt <= int_channel_cnt + 1;
+        if (int_channel_cnt /= 0) then
+          int_channel_cnt <= int_channel_cnt - 1;
         else
-          int_channel_cnt <= 0;
-          int_pixel_cnt   <= int_pixel_cnt + 1;
+          int_channel_cnt <= C_IMG_DEPTH - 1;
+          int_pixel_cnt   <= int_pixel_cnt - 1;
         end if;
       end if;
 
@@ -237,8 +238,8 @@ begin
           slv_data_out     <= slv_data_out_zlib;
 
           -- isl_valid -> int_pixel_cnt -> sl_flush -> sl_finish_zlib
-          if (int_pixel_cnt > C_IMG_WIDTH * C_IMG_HEIGHT - 1) then
-            int_pixel_cnt <= 0;
+          if (int_pixel_cnt = 0) then
+            int_pixel_cnt <= C_IMG_WIDTH * C_IMG_HEIGHT;
             sl_flush      <= '1';
           end if;
           if (sl_flush = '1') then

@@ -60,7 +60,7 @@ architecture behavioral of zlib is
   signal state : t_states;
 
   -- bitbuffer
-  signal int_output_index : integer; -- TODO: range 0 to 72 := 0;
+  signal int_output_index : integer range 0 to 72 := 0;
   signal buffered_output  : std_logic_vector(99 downto 0) := (others => '0');
   signal slv_data_out     : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out     : std_logic := '0';

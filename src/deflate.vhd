@@ -9,7 +9,7 @@ library util;
 
 entity deflate is
   generic (
-    C_INPUT_BUFFER_SIZE  : integer range 3 to 258   := 10;
+    C_INPUT_BUFFER_SIZE  : integer range 3 to 258   := 12;
     C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
 
     C_BTYPE : integer range 0 to 3 := 1

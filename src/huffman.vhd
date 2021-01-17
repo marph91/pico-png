@@ -167,8 +167,9 @@ begin
           sl_flush_increment_index <= '1';
         end if;
 
-        barrel_shifter.sl_valid_in    <= '0';
-        buffer64.int_current_index_d1 <= buffer64.int_current_index; -- delay for barrel shifter
+        barrel_shifter.sl_valid_in <= '0';
+        -- delay for barrel shifter
+        buffer64.int_current_index_d1 <= buffer64.int_current_index;
 
         case state is
 
@@ -177,10 +178,11 @@ begin
 
             -- send everything in one block
             -- TODO: revisit all the reverting
-            barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(C_BTYPE, 2)) & '1') & "0000000000";
-            barrel_shifter.int_bits      <= 3;
-            barrel_shifter.sl_descending <= '0'; -- 0 if revert_vector() is used
+            barrel_shifter.sl_valid_in <= '1';
+            barrel_shifter.slv_data_in <= revert_vector(std_logic_vector(to_unsigned(C_BTYPE, 2)) & '1') & "0000000000";
+            barrel_shifter.int_bits    <= 3;
+            -- 0 if revert_vector() is used
+            barrel_shifter.sl_descending <= '0';
             buffer64.int_current_index   <= buffer64.int_current_index + 3;
 
             state <= WAIT_FOR_INPUT;
@@ -473,7 +475,8 @@ begin
               sl_flush_increment_index <= '0';
               sl_valid_out             <= '0';
             elsif (buffer64.int_current_index >= 8) then
-              if (buffer64.int_current_index_d1 >= buffer64.int_current_index) then -- wait until the counts are synched
+              if (buffer64.int_current_index_d1 >= buffer64.int_current_index) then
+                -- wait until the counts are synced
                 sl_valid_out               <= '1';
                 buffer64.int_current_index <= buffer64.int_current_index - 8;
                 v_slv_data_out := buffer64.slv_data(buffer64.int_current_index - 1 downto buffer64.int_current_index - 8);

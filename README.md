@@ -3,7 +3,7 @@
 [![testsuite](https://github.com/marph91/pico-png/workflows/tests/badge.svg)](https://github.com/marph91/pico-png/actions?query=workflow%3Atests)
 [![synthesis](https://github.com/marph91/pico-png/workflows/synthesis/badge.svg)](https://github.com/marph91/pico-png/actions?query=workflow%3Asynthesis)
 
-`pico-png` is a VHDL implementation of a PNG encoder, as specified in [ISO/IEC 15948:2003](https://www.w3.org/TR/2003/REC-PNG-20031110/), [RFC1950](https://www.ietf.org/rfc/rfc1950.txt) and [RFC1951](https://www.ietf.org/rfc/rfc1951.txt).
+`pico-png` is a VHDL implementation of a PNG encoder, as specified in [ISO/IEC 15948:2003](https://www.w3.org/TR/2003/REC-PNG-20031110/). It includes a deflate compression according to [RFC1950](https://www.ietf.org/rfc/rfc1950.txt) and [RFC1951](https://www.ietf.org/rfc/rfc1951.txt).
 
 ## Features
 
@@ -35,6 +35,7 @@ For details about the configuration, see [here](doc/toplevel_interface.md).
 ### Comparison with Imagemagick
 
 For another comparison, the same input image as above was used. The image data was generated as ones only, which means there should be almost the maximum compression. There were no additional settings. This is the snippet used to create the imagemagick reference:
+
 ```bash
 python3 -c 'with open("800x480_rgb.raw", "wb") as outfile: outfile.write(bytes([1]*800*480*3))'
 convert -size 800x480 -depth 8 rgb:800x480_rgb.raw png24:800x480_rgb.png
@@ -59,3 +60,7 @@ The encoded image size of imagemagick is much smaller than `pico-png`. This is a
 ## Tests
 
 To run the testbench, simply execute `cd sim && ./run_all.py -p4`.
+
+## Similar projects
+
+- <https://github.com/tomtor/HDL-deflate>: Deflate (de)compression in MyHDL.

@@ -11,7 +11,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt update
-          apt install --yes python3-pil
+          apt install --yes python3-pil python3-requests
       - name: Run tests
         run: |
           cd sim

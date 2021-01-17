@@ -13,6 +13,10 @@
 
 For details about the configuration, see [here](doc/toplevel_interface.md).
 
+## Architecture overview
+
+![architecture_overview](doc/images/overview.svg)
+
 ## Stats
 
 ### Comparison with IPB-PNG-E
@@ -52,10 +56,6 @@ The image of `pico-png` is a simulation output from `pico-png/sim/png_encoder/ge
 |Encoded image size (kbyte)|2.4|167.6|
 
 The encoded image size of imagemagick is much smaller than `pico-png`. This is as expected, because `pico-png` uses only a small window size of 12 values. Imagemagick uses most likely the default window size of 32k values. However, the table shows that a reduced image size is achieved in both cases.
-
-## Architecture overview
-
-![architecture_overview](doc/images/overview.svg)
 
 ## Tests
 

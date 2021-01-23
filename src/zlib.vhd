@@ -177,7 +177,7 @@ begin
 
   osl_valid <= sl_valid_out;
   oslv_data <= slv_data_out;
-  osl_rdy   <= sl_rdy_deflate when (state = DEFLATE and int_output_index < 32) else
+  osl_rdy   <= sl_rdy_deflate when state = DEFLATE else
                '0';
 
 end architecture behavioral;

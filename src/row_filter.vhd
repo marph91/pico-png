@@ -43,7 +43,7 @@ architecture behavioral of row_filter is
 
 begin
 
-  proc_crc32 : process (isl_clk) is
+  proc_row_filter : process (isl_clk) is
   begin
 
     if (rising_edge(isl_clk)) then
@@ -52,6 +52,7 @@ begin
 
         when IDLE =>
           sl_valid_out <= '0';
+          sl_rdy       <= '0';
 
           if (isl_start = '1') then
             state <= SEND_FILTER_TYPE;
@@ -80,12 +81,13 @@ begin
               slv_last_pixel_data <= islv_data;
             end if;
           else
-            -- not yet implemented
+            assert false report "Row filter type " & to_string(C_ROW_FILTER_TYPE) & " not yet implemented.";
           end if;
           sl_valid_out <= isl_valid;
           sl_rdy       <= '1';
 
           if (isl_valid = '1') then
+            -- Counting down uses more resources.
             if (int_channel_cnt /= C_IMG_DEPTH - 1) then
               int_channel_cnt <= int_channel_cnt + 1;
             else
@@ -94,8 +96,6 @@ begin
                 int_column_cnt <= int_column_cnt + 1;
               else
                 int_column_cnt <= 0;
-                sl_rdy         <= '0';
-
                 if (int_row_cnt /= C_IMG_HEIGHT - 1) then
                   state       <= DELAY;
                   int_row_cnt <= int_row_cnt + 1;
@@ -110,13 +110,14 @@ begin
         when DELAY =>
           -- delay for slower input to zlib compression
           sl_valid_out <= '0';
+          sl_rdy       <= '0';
           state        <= SEND_FILTER_TYPE;
 
       end case;
 
     end if;
 
-  end process proc_crc32;
+  end process proc_row_filter;
 
   oslv_data <= slv_data_out;
   osl_valid <= sl_valid_out;

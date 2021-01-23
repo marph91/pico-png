@@ -115,7 +115,6 @@ begin
     check_equal(slv_data_out, C_REFERENCE_DATA);
 
     wait until rising_edge(sl_clk);
-    -- assert false;
     
     report ("Done checking");
     data_check_done <= true;

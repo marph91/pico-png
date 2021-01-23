@@ -48,15 +48,15 @@ architecture behavioral of zlib is
   -- only used if FDICT = '1'
   constant C_DICTID : std_logic_vector(4 * 8 - 1 downto 0) := (others => '0');
 
-  signal sl_valid_deflate  : std_logic := '0';
-  signal slv_data_deflate  : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_finish_deflate : std_logic := '0';
-  signal sl_flush_zlib     : std_logic := '0';
-  signal sl_rdy_deflate    : std_logic := '0';
+  signal sl_valid_deflate       : std_logic := '0';
+  signal slv_data_deflate       : std_logic_vector(7 downto 0) := (others => '0');
+  signal sl_finish_deflate      : std_logic := '0';
+  signal sl_finish_deflate_save : std_logic := '0';
+  signal sl_rdy_deflate         : std_logic := '0';
 
   signal slv_data_adler32 : std_logic_vector(31 downto 0) := (others => '0');
 
-  type t_states is (IDLE, HEADERS, DEFLATE, FLUSH, ADLER32);
+  type t_states is (IDLE, HEADERS, DEFLATE, ADLER32);
 
   signal state : t_states;
 
@@ -109,7 +109,8 @@ begin
       osl_finish <= '0';
 
       if (sl_finish_deflate = '1') then
-        sl_flush_zlib <= '1';
+        -- Save the finish impulse of deflate in case it can't be processed directly.
+        sl_finish_deflate_save <= '1';
       end if;
 
       case state is
@@ -139,20 +140,11 @@ begin
             sl_valid_out          <= '1';
             slv_data_out          <= get_byte(buffered_output, int_output_byte_index);
             int_output_byte_index <= int_output_byte_index - 1;
-          elsif (sl_flush_zlib = '1') then
-            state         <= FLUSH;
-            sl_flush_zlib <= '0';
-          end if;
-
-        when FLUSH =>
-          if (int_output_byte_index /= 0) then
-            sl_valid_out          <= '1';
-            slv_data_out          <= get_byte(buffered_output, int_output_byte_index);
-            int_output_byte_index <= int_output_byte_index - 1;
-          else
-            sl_valid_out          <= '0';
-            int_output_byte_index <= 4;
-            state                 <= ADLER32;
+          elsif (sl_finish_deflate_save = '1') then
+            sl_finish_deflate_save <= '0';
+            sl_valid_out           <= '0';
+            int_output_byte_index  <= 4;
+            state                  <= ADLER32;
           end if;
 
         when ADLER32 =>

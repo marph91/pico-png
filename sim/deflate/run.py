@@ -42,6 +42,9 @@ def create_stimuli(root, filename):
 
 
 def create_test_suite(tb_lib):
+    # Execute these tests only locally, to get a reference.
+    return
+
     root = dirname(__file__)
     os.makedirs(join(root, "gen"), exist_ok=True)
 

@@ -48,10 +48,11 @@ architecture behavioral of zlib is
   -- only used if FDICT = '1'
   constant C_DICTID : std_logic_vector(4 * 8 - 1 downto 0) := (others => '0');
 
-  signal sl_valid_deflate                          : std_logic := '0';
-  signal slv_data_deflate                          : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_finish_deflate, sl_finish_deflate_save : std_logic := '0';
-  signal sl_rdy_deflate                            : std_logic := '0';
+  signal sl_valid_deflate  : std_logic := '0';
+  signal slv_data_deflate  : std_logic_vector(7 downto 0) := (others => '0');
+  signal sl_finish_deflate : std_logic := '0';
+  signal sl_flush_zlib     : std_logic := '0';
+  signal sl_rdy_deflate    : std_logic := '0';
 
   signal slv_data_adler32 : std_logic_vector(31 downto 0) := (others => '0');
 
@@ -60,10 +61,15 @@ architecture behavioral of zlib is
   signal state : t_states;
 
   -- bitbuffer
-  signal int_output_index : integer range 0 to 72 := 0;
-  signal buffered_output  : std_logic_vector(99 downto 0) := (others => '0');
-  signal slv_data_out     : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_valid_out     : std_logic := '0';
+  signal int_output_byte_index : integer range 0 to 9 := 0;
+  signal buffered_output       : std_logic_vector(99 downto 0) := (others => '0');
+  signal slv_data_out          : std_logic_vector(7 downto 0) := (others => '0');
+  signal sl_valid_out          : std_logic := '0';
+
+  function get_byte (vector: std_logic_vector; int_byte_index : natural) return std_logic_vector is
+  begin
+    return vector(int_byte_index * 8 - 1 downto (int_byte_index - 1) * 8);
+  end function;
 
 begin
 
@@ -103,7 +109,7 @@ begin
       osl_finish <= '0';
 
       if (sl_finish_deflate = '1') then
-        sl_finish_deflate_save <= '1';
+        sl_flush_zlib <= '1';
       end if;
 
       case state is
@@ -116,53 +122,44 @@ begin
 
         when HEADERS =>
           buffered_output(15 downto 0) <= C_CMF & C_FLG;
-          int_output_index             <= 16;
+          int_output_byte_index        <= 2;
           state                        <= DEFLATE;
 
         when DEFLATE =>
+          sl_valid_out <= '0';
+
           if (sl_valid_deflate = '1') then
-            sl_valid_out <= '0';
-
-            -- sll needs more ressources
+            -- sll needs more resources
             -- buffered_output <= buffered_output sll 8;
-            buffered_output(buffered_output'HIGH downto 8) <= buffered_output(buffered_output'HIGH - 8 downto 0);
-            buffered_output(7 downto 0)                    <= slv_data_deflate(slv_data_deflate'HIGH downto slv_data_deflate'HIGH - 8 + 1);
+            buffered_output <= buffered_output(buffered_output'HIGH - 8 downto 0) &
+                               slv_data_deflate(slv_data_deflate'HIGH downto slv_data_deflate'HIGH - 8 + 1);
 
-            int_output_index <= int_output_index + 8;
-          elsif (int_output_index >= 8) then
-            sl_valid_out     <= '1';
-            slv_data_out     <= buffered_output(int_output_index - 1 downto int_output_index - 8);
-            int_output_index <= int_output_index - 8;
-          elsif (sl_finish_deflate_save = '1') then
-            state                  <= FLUSH;
-            sl_valid_out           <= '0';
-            sl_finish_deflate_save <= '0';
-          else
-            sl_valid_out <= '0';
+            int_output_byte_index <= int_output_byte_index + 1;
+          elsif (int_output_byte_index /= 0) then
+            sl_valid_out          <= '1';
+            slv_data_out          <= get_byte(buffered_output, int_output_byte_index);
+            int_output_byte_index <= int_output_byte_index - 1;
+          elsif (sl_flush_zlib = '1') then
+            state         <= FLUSH;
+            sl_flush_zlib <= '0';
           end if;
 
         when FLUSH =>
-          if (int_output_index >= 8) then
-            sl_valid_out     <= '1';
-            slv_data_out     <= buffered_output(int_output_index - 1 downto int_output_index - 8);
-            int_output_index <= int_output_index - 8;
-          elsif (int_output_index /= 0) then
-            -- TODO: check if this behaves correct
-            -- fill the byte up with zeros
-            buffered_output(7 downto 0) <= (others => '0');
-            int_output_index            <= 8;
-            sl_valid_out                <= '0';
+          if (int_output_byte_index /= 0) then
+            sl_valid_out          <= '1';
+            slv_data_out          <= get_byte(buffered_output, int_output_byte_index);
+            int_output_byte_index <= int_output_byte_index - 1;
           else
-            sl_valid_out     <= '0';
-            int_output_index <= 4;
-            state            <= ADLER32;
+            sl_valid_out          <= '0';
+            int_output_byte_index <= 4;
+            state                 <= ADLER32;
           end if;
 
         when ADLER32 =>
-          if (int_output_index /= 0) then
-            sl_valid_out     <= '1';
-            slv_data_out     <= slv_data_adler32(int_output_index * 8 - 1 downto (int_output_index - 1) * 8);
-            int_output_index <= int_output_index - 1;
+          if (int_output_byte_index /= 0) then
+            sl_valid_out          <= '1';
+            slv_data_out          <= get_byte(slv_data_adler32, int_output_byte_index);
+            int_output_byte_index <= int_output_byte_index - 1;
           else
             sl_valid_out <= '0';
             state        <= IDLE;

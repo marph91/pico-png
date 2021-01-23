@@ -32,12 +32,10 @@ architecture behavioral of row_filter is
   signal int_row_cnt     : integer range 0 to C_IMG_HEIGHT - 1 := 0;
   signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1 := 0;
 
-  signal isl_get_d1                        : std_logic := '0';
-  signal sl_valid_out                      : std_logic := '0';
-  signal slv_data_out, slv_last_pixel_data : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_rdy                            : std_logic := '0';
-
-  signal int_delay : integer range 0 to 2 := 0;
+  signal sl_valid_out        : std_logic := '0';
+  signal slv_data_out        : std_logic_vector(7 downto 0) := (others => '0');
+  signal slv_last_pixel_data : std_logic_vector(7 downto 0) := (others => '0');
+  signal sl_rdy              : std_logic := '0';
 
   type t_states is (IDLE, SEND_FILTER_TYPE, APPLY_FILTER, DELAY);
 
@@ -49,7 +47,6 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
-      isl_get_d1 <= isl_get;
 
       case state is
 
@@ -100,9 +97,7 @@ begin
                 sl_rdy         <= '0';
 
                 if (int_row_cnt /= C_IMG_HEIGHT - 1) then
-                  state     <= DELAY;
-                  int_delay <= 2;
-
+                  state       <= DELAY;
                   int_row_cnt <= int_row_cnt + 1;
                 else
                   state       <= IDLE;
@@ -113,14 +108,9 @@ begin
           end if;
 
         when DELAY =>
-          sl_valid_out <= '0';
-
           -- delay for slower input to zlib compression
-          if (int_delay /= 0) then
-            int_delay <= int_delay - 1;
-          else
-            state <= SEND_FILTER_TYPE;
-          end if;
+          sl_valid_out <= '0';
+          state        <= SEND_FILTER_TYPE;
 
       end case;
 

@@ -4,6 +4,7 @@ library ieee;
 
 library util;
   use util.math_pkg.all;
+  use util.png_pkg.all;
 
 entity lzss is
   generic (
@@ -17,7 +18,7 @@ entity lzss is
     isl_get    : in    std_logic;
     isl_valid  : in    std_logic;
     islv_data  : in    std_logic_vector(7 downto 0);
-    oslv_data  : out   std_logic_vector(16 downto 0);
+    oslv_data  : out   std_logic_vector(calc_huffman_bitwidth(1, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE) - 1 downto 0);
     osl_valid  : out   std_logic;
     osl_finish : out   std_logic;
     osl_rdy    : out   std_logic
@@ -26,18 +27,21 @@ end entity lzss;
 
 architecture behavioral of lzss is
 
-  constant C_MAX_MATCH_LENGTH : integer := min_int(C_INPUT_BUFFER_SIZE - 1, 2 ** 4 - 1);
+  -- TODO: check the length
+  constant C_MAX_MATCH_LENGTH : integer := min_int(C_SEARCH_BUFFER_SIZE, C_INPUT_BUFFER_SIZE - 1);
 
-  -- 0 is part of the input buffer
+  -- 0 is part of the input buffer:
+  -- search buffer: C_SEARCH_BUFFER_SIZE + 1 downto 1
+  -- input buffer: 0 downto -(C_INPUT_BUFFER_SIZE - 1)
 
-  type t_slv_buffer is array(C_SEARCH_BUFFER_SIZE + 1 downto -(C_INPUT_BUFFER_SIZE - 1)) of std_logic_vector(7 downto 0);
+  type t_slv_buffer is array(C_SEARCH_BUFFER_SIZE downto -(C_INPUT_BUFFER_SIZE - 1)) of std_logic_vector(7 downto 0);
 
   signal a_buffer : t_slv_buffer := (others => (others => 'U'));
 
   type t_match is record
-    -- TODO: is this fixed? -> 8 bit length, 15 bit distance
-    int_offset     : integer range 0 to 2 ** 12 - 1;
-    int_length     : integer range 0 to 2 ** 4 - 1; -- TODO: 2**5?
+    -- Maximum is 15 bit distance/offset and 8 bit length.
+    int_offset     : integer range 0 to 2 ** C_INPUT_BUFFER_SIZE - 1;
+    int_length     : integer range 0 to 2 ** C_SEARCH_BUFFER_SIZE - 1;
     slv_next_datum : std_logic_vector(7 downto 0);
   end record t_match;
 
@@ -48,19 +52,23 @@ architecture behavioral of lzss is
   signal state : t_states := IDLE;
 
   signal int_datums_to_fill : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
-  signal int_start_index    : integer range 1 to C_SEARCH_BUFFER_SIZE + 1 := 1;
+  signal int_start_index    : integer range 1 to C_SEARCH_BUFFER_SIZE := 1;
   signal sl_valid_out       : std_logic := '0';
   signal sl_found_match     : std_logic := '0';
 
   signal int_datums_to_flush : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
   signal sl_last_input       : std_logic := '0';
 
+  -- Only needed to pad the output signal.
+  constant C_ZEROS : std_logic_vector(oslv_data'range) := (others => '0');
+
 begin
 
   proc_lzss : process (isl_clk) is
 
     variable v_int_match_length : integer range 1 to C_MAX_MATCH_LENGTH;
-    variable v_int_search_index : integer range 0 to C_SEARCH_BUFFER_SIZE + 1;
+    -- Search index = 0 means no match found.
+    variable v_int_search_index : integer range 0 to C_SEARCH_BUFFER_SIZE;
     variable v_sl_max_length    : std_logic;
 
   begin
@@ -107,15 +115,16 @@ begin
           end if;
 
         when MATCH =>
-          -- find the index of the next matching element
+          -- Search the first element of the input buffer (index 0) in the search buffer.
           v_int_search_index := 0;
-          for current_index in C_SEARCH_BUFFER_SIZE downto 1 loop
+          for current_index in 1 to C_SEARCH_BUFFER_SIZE loop
             if (a_buffer(current_index) = a_buffer(0) and current_index >= int_start_index) then
               v_int_search_index := current_index;
             end if;
           end loop;
 
-          -- get the length of the match if a matching element was found
+          -- Get the length of the match if a matching element was found.
+          -- The match was at element 0 of the input buffer, so look at the next element at index 1 and following.
           if (v_int_search_index /= 0) then
             v_int_match_length := 1;
             v_sl_max_length    := '0';
@@ -124,6 +133,7 @@ begin
                   v_sl_max_length = '0') then
                 v_int_match_length := v_int_match_length + 1;
               else
+                -- Don't look for further matches.
                 v_sl_max_length := '1';
               end if;
             end loop;
@@ -139,7 +149,7 @@ begin
           end if;
 
           -- increment or change state if the whole buffer was inspected
-          if (v_int_search_index /= C_SEARCH_BUFFER_SIZE + 1 and
+          if (v_int_search_index /= C_SEARCH_BUFFER_SIZE and
               v_int_search_index /= 0 and
               v_int_match_length < C_MAX_MATCH_LENGTH and
               sl_last_input = '0') then
@@ -173,9 +183,10 @@ begin
 
   end process proc_lzss;
 
-  oslv_data <= '0' & a_buffer(0) & "00000000" when sl_found_match = '0' else
-               '1' & std_logic_vector(to_unsigned(rec_best_match.int_offset, 12)) &
-               std_logic_vector(to_unsigned(rec_best_match.int_length, 4));
+  -- In case of a literal (no match found), fill the output data with zeros.
+  oslv_data <= '0' & a_buffer(0) & C_ZEROS(C_ZEROS'length - a_buffer(0)'length - 2 downto 0) when sl_found_match = '0' else
+               '1' & std_logic_vector(to_unsigned(rec_best_match.int_offset, log2(C_INPUT_BUFFER_SIZE))) &
+               std_logic_vector(to_unsigned(rec_best_match.int_length, log2(C_SEARCH_BUFFER_SIZE)));
   osl_valid <= sl_valid_out;
   osl_rdy   <= '1' when int_datums_to_fill /= 0 and isl_valid = '0' else
                '0';

@@ -6,6 +6,7 @@ library png_lib;
 
 library util;
   use util.math_pkg.all;
+  use util.png_pkg.all;
 
 entity deflate is
   generic (
@@ -28,20 +29,10 @@ end entity deflate;
 
 architecture behavioral of deflate is
 
-  function calc_huffman_bitwidth (constant btype : integer range 0 to 3) return integer is
-  begin
-
-    if (btype = 0) then
-      return 8;
-    end if;
-
-    return 17;
-  end function;
-
   signal sl_valid_in_lzss  : std_logic := '0';
   signal slv_data_in_lzss  : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out_lzss : std_logic := '0';
-  signal slv_data_out_lzss : std_logic_vector(7 + 9 * C_BTYPE downto 0) := (others => '0'); -- TODO: fix for C_BTYPE = 2
+  signal slv_data_out_lzss : std_logic_vector(calc_huffman_bitwidth(C_BTYPE, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE) - 1 downto 0) := (others => '0');
   signal sl_finish_lzss    : std_logic := '0';
   signal sl_rdy_lzss       : std_logic := '0';
 
@@ -81,8 +72,8 @@ begin
 
   i_huffman : entity png_lib.huffman
     generic map (
-      C_BTYPE    => C_BTYPE,
-      C_BITWIDTH => calc_huffman_bitwidth(C_BTYPE)
+      C_BTYPE          => C_BTYPE,
+      C_INPUT_BITWIDTH => calc_huffman_bitwidth(C_BTYPE, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE)
     )
     port map (
       isl_clk    => isl_clk,

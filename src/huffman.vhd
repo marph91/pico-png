@@ -8,14 +8,14 @@ library util;
 
 entity huffman is
   generic (
-    C_BTYPE    : integer range 0 to 3 := 1;
-    C_BITWIDTH : integer              := 17
+    C_BTYPE          : integer range 0 to 3 := 1;
+    C_INPUT_BITWIDTH : integer              := 17
   );
   port (
     isl_clk    : in    std_logic;
     isl_flush  : in    std_logic;
     isl_valid  : in    std_logic;
-    islv_data  : in    std_logic_vector(C_BITWIDTH - 1 downto 0);
+    islv_data  : in    std_logic_vector(C_INPUT_BITWIDTH - 1 downto 0);
     oslv_data  : out   std_logic_vector(7 downto 0);
     osl_valid  : out   std_logic;
     osl_finish : out   std_logic;
@@ -43,7 +43,7 @@ architecture behavioral of huffman is
   signal sl_bfinal                          : std_logic := '0';
   signal sl_flush, sl_flush_increment_index : std_logic := '0';
 
-  signal slv_current_value : std_logic_vector(C_BITWIDTH - 1 downto 0) := (others => '0');
+  signal slv_current_value : std_logic_vector(C_INPUT_BITWIDTH - 1 downto 0) := (others => '0');
 
   type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, SEND_BYTES);
 
@@ -75,8 +75,8 @@ begin
 
       if (rising_edge(isl_clk)) then
         if (isl_valid = '1') then
-          buffer64.slv_data(63 - buffer64.int_current_index downto 63 - buffer64.int_current_index - C_BITWIDTH + 1) <= islv_data(islv_data'HIGH downto islv_data'HIGH - C_BITWIDTH + 1);
-          buffer64.int_current_index                                                                                 <= buffer64.int_current_index + C_BITWIDTH;
+          buffer64.slv_data(63 - buffer64.int_current_index downto 63 - buffer64.int_current_index - C_INPUT_BITWIDTH + 1) <= islv_data(islv_data'HIGH downto islv_data'HIGH - C_INPUT_BITWIDTH + 1);
+          buffer64.int_current_index                                                                                       <= buffer64.int_current_index + C_INPUT_BITWIDTH;
         elsif (buffer64.int_current_index >= 32) then
           buffer64.slv_data          <= buffer64.slv_data(31 downto 0) & x"00000000";
           buffer64.int_current_index <= buffer64.int_current_index - 32;
@@ -223,6 +223,7 @@ begin
             state <= SEND_BYTES;
 
           when LENGTH_CODE =>
+            -- TODO: Adapt bitwidth to buffer size.
             v_int_match_length := to_integer(unsigned(slv_current_value(3 downto 0)));
             if (v_int_match_length <= 10) then
               v_int_code := 254 + v_int_match_length;
@@ -329,6 +330,7 @@ begin
 
           when DISTANCE_CODE =>
             -- 5 bit distance code
+            -- TODO: Adapt bitwidth to buffer size.
             v_int_match_distance := to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto 4)));
 
             if (v_int_match_distance <= 4) then

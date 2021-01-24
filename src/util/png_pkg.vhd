@@ -2,6 +2,9 @@ library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
 
+library util;
+  use util.math_pkg.all;
+
 package png_pkg is
 
   function get_img_depth (color_type : integer) return integer;
@@ -26,6 +29,11 @@ package png_pkg is
   function calculate_adler32 (
     data : std_logic_vector;
     start_value : std_logic_vector(31 downto 0)) return std_logic_vector;
+
+  function calc_huffman_bitwidth (
+    constant btype : integer range 0 to 3;
+    constant input_buffer_size : integer range 3 to 258;
+    constant search_buffer_size : integer range 1 to 32768) return integer;
 
 end package png_pkg;
 
@@ -200,5 +208,26 @@ package body png_pkg is
     end loop;
     return std_logic_vector(to_unsigned(v_s2, 16)) & std_logic_vector(to_unsigned(v_s1, 16));
   end calculate_adler32;
+
+  function calc_huffman_bitwidth (
+    constant btype : integer range 0 to 3;
+    constant input_buffer_size : integer range 3 to 258;
+    constant search_buffer_size : integer range 1 to 32768) return integer is
+  begin
+
+    -- TODO: add btype = 2
+
+    if (btype = 0) then
+      return 8;
+    end if;
+
+    -- 1 bit match, distance/offset, length
+    if (log2(search_buffer_size) + log2(input_buffer_size) < 8) then
+      report "Input and search buffer too small." severity warning;
+      return 1 + 8;
+    end if;
+
+    return 1 + log2(search_buffer_size) + log2(input_buffer_size);
+  end function;
 
 end png_pkg;

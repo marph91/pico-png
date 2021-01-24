@@ -1,6 +1,7 @@
 """Test cases for the lzss implementation."""
 
 from collections import namedtuple
+from math import ceil, log2
 import os
 from os.path import join, dirname
 
@@ -16,6 +17,14 @@ def create_stimuli(root, name, input_data, output_data):
     filename = join(root, "gen", "output_%s.csv" % name)
     with open(filename, "w") as outfile:
         outfile.write(", ".join(map(str, output_data)))
+
+
+def lb(size):
+    return ceil(log2(size))
+
+
+def gen_literal(literal_value, input_buffer_size, search_buffer_size):
+    return literal_value << max(0, lb(input_buffer_size) + lb(search_buffer_size) - 8)
 
 
 def create_test_suite(tb_lib):
@@ -38,32 +47,55 @@ def create_test_suite(tb_lib):
     Case = namedtuple("Case", ["name", "input_buffer_size",
                                "search_buffer_size", "data_in", "data_out"])
     testcases = [
+        # TODO: refactor: abstract literal and match
         Case("no_compression", 10, 12, [i for i in range(30)],
-             [(i << 8) for i in range(30)]),
-        Case("rle", 5, 5, [0, 0, 0, 0, 1],
-             [0, (1 << 16) + (1 << 4) + 3, 1 << 8]),
+             [gen_literal(i, 10, 12) for i in range(30)]),
+        # Case("rle", 5, 5, [0, 0, 0, 0, 1],
+        #      [gen_literal(0, 5, 5),
+        #       (1 << lb(5) + lb(5)) + (1 << lb(5)) + 3,
+        #       gen_literal(1, 5, 5)
+        #      ]),
         Case("rle_max_length", 20, 5, [0]*20 + [1],
-             [0, (1 << 16) + (1 << 4) + 15, (1 << 16) + (1 << 4) + 4, 1 << 8]),
+             [gen_literal(0, 20, 5),
+              (1 << lb(20) + lb(5)) + (1 << lb(5)) + 5,
+              (1 << lb(20) + lb(5)) + (5 << lb(5)) + 5,
+              (1 << lb(20) + lb(5)) + (5 << lb(5)) + 5,
+              (1 << lb(20) + lb(5)) + (5 << lb(5)) + 4,
+              gen_literal(1, 20, 5),
+             ]),
         Case("repeat", 11, 10, [0, 1, 2, 0, 1, 2, 0, 1, 2, 0],
-             [0 << 8, 1 << 8, 2 << 8, (1 << 16) + (3 << 4) + 7]),
+             [gen_literal(0, 11, 10),
+              gen_literal(1, 11, 10),
+              gen_literal(2, 11, 10),
+              (1 << lb(11) + lb(10)) + (3 << lb(10)) + 7
+             ]),
         Case("complex", 10, 12, complex_list,
-             [0, 1 << 8, 2 << 8, 3 << 8, 4 << 8, 5 << 8, 6 << 8, 2 << 8,
-              7 << 8, 5 << 8,
-              (1 << 16) + (8 << 4) + 7,
-              encode_dict["n"] << 8,
-              encode_dict["d"] << 8,
-              (1 << 16) + (12 << 4) + 7,
-              encode_dict[" "] << 8,
-              encode_dict["h"] << 8,
-              encode_dict["e"] << 8,
-              encode_dict["r"] << 8,
-              encode_dict["u"] << 8,
-              encode_dict["m"] << 8,
-              encode_dict["."] << 8,
+             [gen_literal(0, 10, 12),
+              gen_literal(1, 10, 12),
+              gen_literal(2, 10, 12),
+              gen_literal(3, 10, 12),
+              gen_literal(4, 10, 12),
+              gen_literal(5, 10, 12),
+              gen_literal(6, 10, 12),
+              gen_literal(2, 10, 12),
+              gen_literal(7, 10, 12),
+              gen_literal(5, 10, 12),
+              (1 << lb(10) + lb(12)) + (8 << lb(12)) + 7,
+              gen_literal(encode_dict["n"], 10, 12),
+              gen_literal(encode_dict["d"], 10, 12),
+              (1 << lb(10) + lb(12)) + (12 << lb(12)) + 7,
+              gen_literal(encode_dict[" "], 10, 12),
+              gen_literal(encode_dict["h"], 10, 12),
+              gen_literal(encode_dict["e"], 10, 12),
+              gen_literal(encode_dict["r"], 10, 12),
+              gen_literal(encode_dict["u"], 10, 12),
+              gen_literal(encode_dict["m"], 10, 12),
+              gen_literal(encode_dict["."], 10, 12),
              ]),
     ]
 
     for case in testcases:
+        print(case)
         generics = {
             "id": case.name,
             "C_INPUT_BUFFER_SIZE": case.input_buffer_size,

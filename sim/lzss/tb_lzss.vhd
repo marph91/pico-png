@@ -6,6 +6,7 @@ library png_lib;
 
 library util;
 use util.math_pkg.all;
+use util.png_pkg.all;
 
 library sim;
 use sim.vunit_common_pkg.all;
@@ -30,7 +31,7 @@ architecture tb of tb_lzss is
   signal sl_valid_in : std_logic := '0';
   signal slv_data_in : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out : std_logic := '0';
-  signal slv_data_out : std_logic_vector(16 downto 0) := (others => '0');
+  signal slv_data_out : std_logic_vector(calc_huffman_bitwidth(1, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE) - 1 downto 0);
   signal sl_rdy : std_logic := '0';
 
   shared variable data_src : integer_array_t;
@@ -44,7 +45,7 @@ begin
     C_INPUT_BUFFER_SIZE    => C_INPUT_BUFFER_SIZE,
     C_SEARCH_BUFFER_SIZE   => C_SEARCH_BUFFER_SIZE,
     C_MIN_MATCH_LENGTH     => C_MIN_MATCH_LENGTH
-    )
+  )
   port map (
     isl_clk     => sl_clk,
     isl_flush   => sl_flush,

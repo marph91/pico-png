@@ -1,6 +1,7 @@
 """Test cases for the crc32 implementation."""
 
 from collections import namedtuple
+from functools import partial
 import os
 from os.path import join, dirname
 from random import randint
@@ -18,20 +19,21 @@ def to_signed(int_: int) -> int:
     return int_
 
 
-def generate_data(root, name, input_data):
-    filename = join(root, "gen", "input_%s.csv" % name)
+def generate_data(root, case):
+    filename = join(root, "gen", f"input_{case.name}.csv")
     input_data_preprocessed = [int.from_bytes(datum, "big")
-                               for datum in input_data]
+                               for datum in case.data_in]
     input_data_preprocessed = map(to_signed, input_data_preprocessed)
     input_data_preprocessed = map(str, input_data_preprocessed)
     with open(filename, "w") as infile:
         infile.write(", ".join(input_data_preprocessed))
 
-    output_data = to_signed(zlib.crc32(b"".join(input_data)))
+    output_data = to_signed(zlib.crc32(b"".join(case.data_in)))
 
-    filename = join(root, "gen", "output_%s.csv" % name)
+    filename = join(root, "gen", f"output_{case.name}.csv")
     with open(filename, "w") as outfile:
         outfile.write(str(output_data))
+    return True
 
 
 def create_test_suite(tb_lib):
@@ -78,4 +80,4 @@ def create_test_suite(tb_lib):
         }
         tb_crc32.add_config(
             name=case.name, generics=generics,
-            pre_config=generate_data(root, case.name, case.data_in))
+            pre_config=partial(generate_data, root, case))

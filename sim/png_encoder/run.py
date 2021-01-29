@@ -1,7 +1,7 @@
 """Test cases for the png_encoder module."""
 
 import dataclasses
-import functools
+from functools import partial
 import io
 import itertools
 import os
@@ -13,15 +13,16 @@ import zlib
 from PIL import Image
 
 
-def create_stimuli(root: str, name: str, input_data: List[int]):
+def create_stimuli(root: str, case):
     # write out csv only for debugging purposes
-    filename = join(root, "gen", f"input_{name}.csv")
+    filename = join(root, "gen", f"input_{case.id_}.csv")
     with open(filename, "w") as infile:
-        infile.write(", ".join(map(str, input_data)))
+        infile.write(", ".join(map(str, case.data_in)))
 
-    filename = join(root, "gen", f"input_{name}.raw")
+    filename = join(root, "gen", f"input_{case.id_}.raw")
     with open(filename, "wb") as infile:
-        infile.write(bytes(input_data))  # only works for 8 bit values!
+        infile.write(bytes(case.data_in))  # only works for 8 bit values!
+    return True
 
 
 def apply_filter(data: bytes) -> List[int]:
@@ -43,8 +44,8 @@ def apply_filter(data: bytes) -> List[int]:
 
 
 # TODO: use getfullargspec() API to allow type annotations
-def assemble_and_check_png(root, input_data, name, width, depth):
-    with open(join(root, "gen", f"png_{name}.txt"), "r") as infile:
+def assemble_and_check_png(root, case):
+    with open(join(root, "gen", f"png_{case.id_}.txt"), "r") as infile:
         binary_strings = infile.readlines()
 
     png_bytes = bytearray()
@@ -56,7 +57,7 @@ def assemble_and_check_png(root, input_data, name, width, depth):
     # length has to be specified there.
     # strip the last three bytes of the header. they are only padded.
     png_bytes = png_bytes[-44:-3] + png_bytes[:-44]
-    with open(join(root, "gen", f"test_img_{name}.png"), "wb") as outfile:
+    with open(join(root, "gen", f"test_img_{case.id_}.png"), "wb") as outfile:
         outfile.write(png_bytes)
 
     # verify the image data with pillow
@@ -78,12 +79,14 @@ def assemble_and_check_png(root, input_data, name, width, depth):
 
     decoded_data = zlib.decompress(idat_data)
     # apply filter types to compare with original data
-    scanlines = [decoded_data[x:x + width*depth + 1]
-                 for x in range(0, len(decoded_data), width*depth + 1)]
+    line_size = case.width * case.depth
+    scanlines = [decoded_data[x:x + line_size + 1]
+                 for x in range(0, len(decoded_data), line_size + 1)]
     reconstructed_data = []
     for line in scanlines:
         reconstructed_data.extend(apply_filter(line))
 
+    input_data = bytearray(case.data_in)
     print("input data:", input_data, list(input_data))
     print("reconstructed data:", reconstructed_data)
     return list(input_data) == reconstructed_data
@@ -158,8 +161,6 @@ def create_test_suite(tb_lib):
     testcases.append(Testcase("ones", 800, 480, 2, 1, 0))
 
     for case in testcases:
-        input_bytes = bytearray(case.data_in)
-
         generics = {
             "id": case.id_,
             "C_IMG_WIDTH": case.width,
@@ -173,7 +174,5 @@ def create_test_suite(tb_lib):
         }
         tb_deflate.add_config(
             name=case.id_, generics=generics,
-            pre_config=create_stimuli(root, case.id_, case.data_in),
-            post_check=functools.partial(
-                assemble_and_check_png, root, input_bytes, case.id_,
-                case.width, case.depth))
+            pre_config=partial(create_stimuli, root, case),
+            post_check=partial(assemble_and_check_png, root, case))

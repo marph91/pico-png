@@ -65,6 +65,9 @@ begin
     set_stop_level(failure);
     data_src := load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
     data_ref := load_csv(tb_path(runner_cfg) & "gen/output_" & id & ".csv");
+    check_relation(width(data_ref) /= 0);
+    check_relation(height(data_ref) /= 0);
+    check_relation(depth(data_ref) /= 0);
 
     wait until (stimuli_done and
                 data_check_done and
@@ -103,12 +106,12 @@ begin
     wait until rising_edge(sl_clk);
     data_check_done <= false;
 
-    for i in 0 to width(data_ref)-1 loop
+    for i in 0 to width(data_ref) - 1 loop
       wait until rising_edge(sl_clk) and sl_valid_out = '1';
       report integer'image(get(data_ref, i, 0));
       check_equal(slv_data_out, std_logic_vector(to_unsigned(get(data_ref, i, 0), slv_data_out'length)));
     end loop;
-    
+
     report ("Done checking");
     data_check_done <= true;
     wait;

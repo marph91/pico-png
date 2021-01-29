@@ -55,6 +55,9 @@ begin
     set_stop_level(failure);
     data_src := load_csv(tb_path(runner_cfg) & "gen/input_" & id & ".csv");
     data_ref := load_csv(tb_path(runner_cfg) & "gen/output_" & id & ".csv");
+    check_relation(width(data_ref) /= 0);
+    check_relation(height(data_ref) /= 0);
+    check_relation(depth(data_ref) /= 0);
 
     wait until (stimuli_done and
                 data_check_done and

@@ -9,6 +9,7 @@
 # throughput at 100MHz: 27010728,6933 Byte/s (513216 Byte / 19.00045 ms)
 # compression ratio: 3.401056335694736 (513216 Byte / 150899 Byte)
 
+from functools import partial
 from io import BytesIO
 import os
 from os.path import join, dirname
@@ -39,6 +40,7 @@ def create_stimuli(root, filename):
         # convert bytes to csv of integers and save it
         with open(filepath.resolve(), "w") as outfile:
             outfile.write(",".join([str(byte_) for byte_ in data]))
+    return True
 
 
 def create_test_suite(tb_lib):
@@ -56,4 +58,4 @@ def create_test_suite(tb_lib):
     }
     tb_deflate.add_config(
         name="tb_deflate", generics=generics,
-        pre_config=create_stimuli(root, filename))
+        pre_config=partial(create_stimuli, root, filename))

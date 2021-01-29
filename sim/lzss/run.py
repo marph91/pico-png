@@ -1,6 +1,7 @@
 """Test cases for the lzss implementation."""
 
 from dataclasses import dataclass
+from functools import partial
 from math import ceil, log2
 import os
 from os.path import join, dirname
@@ -115,4 +116,4 @@ def create_test_suite(tb_lib):
         }
         tb_lzss.add_config(
             name=case.name, generics=generics,
-            pre_config=lambda: create_stimuli(root, case))
+            pre_config=partial(create_stimuli, root, case))

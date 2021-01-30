@@ -65,7 +65,7 @@ begin
 
   proc_lzss : process (isl_clk) is
 
-    variable v_int_match_length : integer range 1 to C_MAX_MATCH_LENGTH;
+    variable v_int_match_length : integer range C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH;
     -- Search index = 0 means no match found.
     variable v_int_search_index : integer range 0 to C_SEARCH_BUFFER_SIZE;
 
@@ -127,12 +127,10 @@ begin
           -- Get the length of the match if a matching element was found.
           -- I. e. try to match the next elements of search and input buffer.
           if (v_int_search_index /= 0) then
-            v_int_match_length := C_MIN_MATCH_LENGTH;
-
-            for match_length in C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH - 1 loop
-              if (a_buffer(v_int_search_index - match_length) = a_buffer(-match_length)) then
-                v_int_match_length := v_int_match_length + 1;
-              else
+            v_int_match_length := C_MAX_MATCH_LENGTH;
+            for match_length in C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH loop
+              if (a_buffer(v_int_search_index - match_length) /= a_buffer(-match_length)) then
+                v_int_match_length := match_length;
                 -- Don't look for further matches, since we got a mismatch.
                 exit;
               end if;

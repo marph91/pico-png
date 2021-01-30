@@ -61,6 +61,9 @@ The encoded image size of imagemagick is much smaller than `pico-png`. This is a
 
 To run the testbench, simply execute `cd sim && ./run_all.py -p4`.
 
-## Similar projects
+## Similar projects and further links
 
 - <https://github.com/tomtor/HDL-deflate>: Deflate (de)compression in MyHDL.
+- <https://hal-upec-upem.archives-ouvertes.fr/hal-01305864/document>
+- <http://www.ece.ualberta.ca/~jhan8/publications/1570528606.pdf>
+- <https://zenodo.org/record/3679358>

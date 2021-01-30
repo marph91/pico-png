@@ -52,7 +52,6 @@ architecture behavioral of lzss is
   signal state : t_states := IDLE;
 
   signal int_datums_to_fill : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
-  signal int_start_index    : integer range 1 to C_SEARCH_BUFFER_SIZE := 1;
   signal sl_valid_out       : std_logic := '0';
   signal sl_found_match     : std_logic := '0';
 
@@ -118,7 +117,7 @@ begin
           -- Search the first element of the input buffer (index 0) in the search buffer.
           v_int_search_index := 0;
           for current_index in 1 to C_SEARCH_BUFFER_SIZE loop
-            if (a_buffer(current_index) = a_buffer(0) and current_index >= int_start_index) then
+            if (a_buffer(current_index) = a_buffer(0)) then
               v_int_search_index := current_index;
             end if;
           end loop;
@@ -147,20 +146,10 @@ begin
               sl_found_match <= '1';
             end if;
           end if;
-
-          -- increment or change state if the whole buffer was inspected
-          if (v_int_search_index /= C_SEARCH_BUFFER_SIZE and
-              v_int_search_index /= 0 and
-              v_int_match_length < C_MAX_MATCH_LENGTH and
-              sl_last_input = '0') then
-            int_start_index <= v_int_search_index + 1;
-          else
-            state <= OUTPUT_MATCH;
-          end if;
+          state <= OUTPUT_MATCH;
 
         when OUTPUT_MATCH =>
           if (isl_get = '1') then
-            int_start_index <= 1;
             if (sl_found_match = '1' and rec_best_match.int_length >= C_MIN_MATCH_LENGTH) then
               int_datums_to_fill <= rec_best_match.int_length;
             else

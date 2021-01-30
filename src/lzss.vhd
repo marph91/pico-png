@@ -47,7 +47,7 @@ architecture behavioral of lzss is
 
   signal rec_best_match : t_match := (0, 0, (others => '0'));
 
-  type t_states is (IDLE, FILL, MATCH, OUTPUT_MATCH);
+  type t_states is (IDLE, FILL, FIND_MATCH_OFFSET, FIND_MATCH_LENGTH, SEND_OUTPUT);
 
   signal state : t_states := IDLE;
 
@@ -67,7 +67,7 @@ begin
 
     variable v_int_match_length : integer range C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH;
     -- Search index = 0 means no match found.
-    variable v_int_search_index : integer range 0 to C_SEARCH_BUFFER_SIZE;
+    variable v_int_match_offset : integer range 0 to C_SEARCH_BUFFER_SIZE;
 
   begin
 
@@ -97,7 +97,7 @@ begin
           end if;
 
           if (int_datums_to_fill = 0) then
-            state          <= MATCH;
+            state          <= FIND_MATCH_OFFSET;
             rec_best_match <= (0, 0, a_buffer(0));
           elsif (int_datums_to_flush /= 0) then
             int_datums_to_fill  <= int_datums_to_fill - 1;
@@ -112,36 +112,44 @@ begin
             osl_finish    <= '1';
           end if;
 
-        when MATCH =>
+        when FIND_MATCH_OFFSET =>
           -- Try to find the first C_MIN_MATCH_LENGTH elements of the input buffer
           -- in the search buffer.
-          v_int_search_index := 0;
+          v_int_match_offset := 0;
           for current_index in 1 to C_SEARCH_BUFFER_SIZE loop
             -- TODO: We look a bit in the input buffer for searching.
             if (a_buffer(current_index downto current_index - C_MIN_MATCH_LENGTH + 1) =
                 a_buffer(0 downto - C_MIN_MATCH_LENGTH + 1)) then
-              v_int_search_index := current_index;
+              v_int_match_offset := current_index;
             end if;
           end loop;
 
+          if (v_int_match_offset = 0) then
+            -- literal
+            state <= SEND_OUTPUT;
+          else
+            -- match
+            state <= FIND_MATCH_LENGTH;
+          end if;
+
+        when FIND_MATCH_LENGTH =>
           -- Get the length of the match if a matching element was found.
           -- I. e. try to match the next elements of search and input buffer.
-          if (v_int_search_index /= 0) then
-            v_int_match_length := C_MAX_MATCH_LENGTH;
-            for match_length in C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH loop
-              if (a_buffer(v_int_search_index - match_length) /= a_buffer(-match_length)) then
-                v_int_match_length := match_length;
-                -- Don't look for further matches, since we got a mismatch.
-                exit;
-              end if;
-            end loop;
+          v_int_match_length := C_MAX_MATCH_LENGTH;
+          for match_length in C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH loop
+            if (a_buffer(v_int_match_offset - match_length) /= a_buffer(-match_length)) then
+              v_int_match_length := match_length;
+              -- Don't look for further matches, since we got a mismatch.
+              exit;
+            end if;
+          end loop;
 
-            rec_best_match <= (v_int_search_index, v_int_match_length, a_buffer(-v_int_match_length));
-            sl_found_match <= '1';
-          end if;
-          state <= OUTPUT_MATCH;
+          rec_best_match <= (v_int_match_offset, v_int_match_length, a_buffer(-v_int_match_length));
+          sl_found_match <= '1';
 
-        when OUTPUT_MATCH =>
+          state <= SEND_OUTPUT;
+
+        when SEND_OUTPUT =>
           if (isl_get = '1') then
             if (sl_found_match = '1') then
               int_datums_to_fill <= rec_best_match.int_length;

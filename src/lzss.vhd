@@ -148,7 +148,7 @@ begin
             if (sl_found_match = '1') then
               int_datums_to_fill <= rec_best_match.int_length;
             else
-              int_datums_to_fill <= rec_best_match.int_length + 1;
+              int_datums_to_fill <= 1;
             end if;
             sl_valid_out <= '1';
 

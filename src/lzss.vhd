@@ -68,7 +68,6 @@ begin
     variable v_int_match_length : integer range 1 to C_MAX_MATCH_LENGTH;
     -- Search index = 0 means no match found.
     variable v_int_search_index : integer range 0 to C_SEARCH_BUFFER_SIZE;
-    variable v_sl_max_length    : std_logic;
 
   begin
 
@@ -114,43 +113,39 @@ begin
           end if;
 
         when MATCH =>
-          -- Search the first element of the input buffer (index 0) in the search buffer.
+          -- Try to find the first C_MIN_MATCH_LENGTH elements of the input buffer
+          -- in the search buffer.
           v_int_search_index := 0;
           for current_index in 1 to C_SEARCH_BUFFER_SIZE loop
-            if (a_buffer(current_index) = a_buffer(0)) then
+            -- TODO: We look a bit in the input buffer for searching.
+            if (a_buffer(current_index downto current_index - C_MIN_MATCH_LENGTH + 1) =
+                a_buffer(0 downto - C_MIN_MATCH_LENGTH + 1)) then
               v_int_search_index := current_index;
             end if;
           end loop;
 
           -- Get the length of the match if a matching element was found.
-          -- The match was at element 0 of the input buffer, so look at the next element at index 1 and following.
+          -- I. e. try to match the next elements of search and input buffer.
           if (v_int_search_index /= 0) then
-            v_int_match_length := 1;
-            v_sl_max_length    := '0';
-            for current_index in 1 to C_MAX_MATCH_LENGTH - 1 loop
-              if (a_buffer(v_int_search_index - current_index) = a_buffer(-current_index) and
-                  v_sl_max_length = '0') then
+            v_int_match_length := C_MIN_MATCH_LENGTH;
+
+            for match_length in C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH - 1 loop
+              if (a_buffer(v_int_search_index - match_length) = a_buffer(-match_length)) then
                 v_int_match_length := v_int_match_length + 1;
               else
-                -- Don't look for further matches.
-                v_sl_max_length := '1';
+                -- Don't look for further matches, since we got a mismatch.
+                exit;
               end if;
             end loop;
 
-            -- check whether this match is better (=longer) than the current best match
-            -- TODO: take first (short) match to favour huffman coding?
-            -- also check whether this match is longer than the minimum length
-            if (v_int_match_length > rec_best_match.int_length and
-                v_int_match_length >= C_MIN_MATCH_LENGTH) then
-              rec_best_match <= (v_int_search_index, v_int_match_length, a_buffer(-v_int_match_length));
-              sl_found_match <= '1';
-            end if;
+            rec_best_match <= (v_int_search_index, v_int_match_length, a_buffer(-v_int_match_length));
+            sl_found_match <= '1';
           end if;
           state <= OUTPUT_MATCH;
 
         when OUTPUT_MATCH =>
           if (isl_get = '1') then
-            if (sl_found_match = '1' and rec_best_match.int_length >= C_MIN_MATCH_LENGTH) then
+            if (sl_found_match = '1') then
               int_datums_to_fill <= rec_best_match.int_length;
             else
               int_datums_to_fill <= rec_best_match.int_length + 1;

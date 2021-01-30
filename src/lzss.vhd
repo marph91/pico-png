@@ -53,13 +53,17 @@ architecture behavioral of lzss is
 
   signal int_datums_to_fill : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
   signal sl_valid_out       : std_logic := '0';
-  signal sl_found_match     : std_logic := '0';
 
   signal int_datums_to_flush : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
   signal sl_last_input       : std_logic := '0';
 
   -- Only needed to pad the output signal.
   constant C_ZEROS : std_logic_vector(oslv_data'range) := (others => '0');
+
+  -- Helper signals to visualize the output better.
+  signal slv_literal_data : std_logic_vector(oslv_data'high - 1 downto oslv_data'low);
+  signal slv_match_offset : std_logic_vector(log2(C_INPUT_BUFFER_SIZE) - 1 downto 0);
+  signal slv_match_length : std_logic_vector(log2(C_SEARCH_BUFFER_SIZE) - 1 downto 0);
 
 begin
 
@@ -72,7 +76,9 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
+      -- When flushing, all inputs should be transmitted already.
       assert not (isl_valid = '1' and int_datums_to_flush /= 0);
+      -- Inputs should only occur at the FILL state.
       assert not (isl_valid = '1' and state /= FILL);
 
       osl_finish   <= '0';
@@ -89,8 +95,10 @@ begin
           state              <= FILL;
 
         when FILL =>
-          sl_found_match <= '0';
-
+          -- Fill the buffer at three occasions:
+          -- 1. Initially.
+          -- 2. After a match or literal.
+          -- 3. For flushing at the end.
           if (isl_valid = '1') then
             int_datums_to_fill <= int_datums_to_fill - 1;
             a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & islv_data;
@@ -126,6 +134,7 @@ begin
 
           if (v_int_match_offset = 0) then
             -- literal
+            int_datums_to_fill <= 1;
             state <= SEND_OUTPUT;
           else
             -- match
@@ -145,17 +154,12 @@ begin
           end loop;
 
           rec_best_match <= (v_int_match_offset, v_int_match_length, a_buffer(-v_int_match_length));
-          sl_found_match <= '1';
 
+          int_datums_to_fill <= v_int_match_length;
           state <= SEND_OUTPUT;
 
         when SEND_OUTPUT =>
           if (isl_get = '1') then
-            if (sl_found_match = '1') then
-              int_datums_to_fill <= rec_best_match.int_length;
-            else
-              int_datums_to_fill <= 1;
-            end if;
             sl_valid_out <= '1';
 
             if (sl_last_input = '0') then
@@ -174,9 +178,12 @@ begin
   end process proc_lzss;
 
   -- In case of a literal (no match found), fill the output data with zeros.
-  oslv_data <= '0' & a_buffer(0) & C_ZEROS(C_ZEROS'length - a_buffer(0)'length - 2 downto 0) when sl_found_match = '0' else
-               '1' & std_logic_vector(to_unsigned(rec_best_match.int_offset, log2(C_INPUT_BUFFER_SIZE))) &
-               std_logic_vector(to_unsigned(rec_best_match.int_length, log2(C_SEARCH_BUFFER_SIZE)));
+  slv_literal_data <= a_buffer(0) & C_ZEROS(C_ZEROS'length - a_buffer(0)'length - 2 downto 0);
+  slv_match_offset <= std_logic_vector(to_unsigned(rec_best_match.int_offset, log2(C_INPUT_BUFFER_SIZE)));
+  slv_match_length <= std_logic_vector(to_unsigned(rec_best_match.int_length, log2(C_SEARCH_BUFFER_SIZE)));
+
+  oslv_data <= '0' & slv_literal_data when int_datums_to_fill = 1 else
+               '1' & slv_match_offset & slv_match_length;
   osl_valid <= sl_valid_out;
   osl_rdy   <= '1' when int_datums_to_fill /= 0 and isl_valid = '0' else
                '0';

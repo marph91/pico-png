@@ -21,5 +21,6 @@ ghdl -a --std=08 --work=png_lib "$ROOT/src/png_encoder.vhd"
 # ghdl --synth --std=08 --work=png_lib png_encoder
 yosys -m ghdl -p 'ghdl --std=08 --work=png_lib --no-formal png_encoder; synth_ice40 -json png_encoder.json'
 # nextpnr-ice40 --hx1k --package tq144 --json png_encoder.json --asc png_encoder.asc
+nextpnr-ice40 --hx8k --package cm81 --json png_encoder.json --asc png_encoder.asc
 # icepack png_encoder.asc png_encoder.bin
 # iceprog png_encoder.bin

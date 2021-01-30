@@ -183,7 +183,6 @@ package body png_pkg is
     return v_chunk_length & chunk_type & chunk_data & v_chunk_crc;
   end generate_chunk;
 
-  -- TODO: LUT
   -- Start value for first iteration must be 1!
 
   function calculate_adler32 (
@@ -192,6 +191,8 @@ package body png_pkg is
     variable v_s1           : integer range 0 to 2 ** 16 - 1;
     variable v_s2           : integer range 0 to 2 ** 16 - 1;
     variable v_current_byte : integer range 0 to 2 ** 8 - 1;
+    variable v_sum1         : integer range 0 to 2 ** 17 - 1;
+    variable v_sum2         : integer range 0 to 2 ** 17 - 1;
   begin
     assert data'LENGTH mod 8 = 0;
 
@@ -199,12 +200,25 @@ package body png_pkg is
     v_s2 := to_integer(unsigned(start_value(31 downto 16)));
 
     for byte in data'LENGTH / 8 - 1 downto 0 loop
-      -- TODO: Check for alternative modulo function, since the implementation differs between vendors.
-      -- All tried approaches had worse ressource usage. For alternatives, see:
-      -- https://stackoverflow.com/questions/2773628/better-ways-to-implement-a-modulo-operation-algorithm-question
       v_current_byte := to_integer(unsigned(data((byte + 1) * 8 - 1 downto byte * 8)));
-      v_s1 := (v_s1 + v_current_byte) mod 65521;
-      v_s2 := (v_s2 + v_s1) mod 65521;
+      v_sum1 := v_s1 + v_current_byte;
+      -- Calculate the modulo manually, since it uses less resources and has better timing.
+      if (v_sum1 < 65521) then
+        v_s1 := v_sum1;
+      else
+        v_s1 := v_sum1 - 65521;
+      end if;
+
+      v_sum2 := v_s2 + v_s1;
+
+      if (v_sum2 < 65521) then
+        v_s2 := v_sum2;
+      elsif (v_sum2 < 65521 * 2) then
+        v_s2 := v_sum2 - 65521;
+      else
+        v_s2 := v_sum2 - 65521 * 2;
+      end if;
+
     end loop;
     return std_logic_vector(to_unsigned(v_s2, 16)) & std_logic_vector(to_unsigned(v_s1, 16));
   end calculate_adler32;

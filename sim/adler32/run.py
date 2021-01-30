@@ -44,15 +44,16 @@ def create_test_suite(tb_lib):
 
     Case = namedtuple("Case", ["name", "data_in"])
     testcases = [
-        Case("24_bit", [b"\x61\x62\x63"]),
         Case("8_bit_random", [randint(0, 255).to_bytes(1, "big")]),
-        Case("32_bit_random", [randint(0, 2 ** 31 - 1).to_bytes(4, "big")]),
-        Case("IEND", [b"\x49\x45\x4e\x44"]),
         Case("8_bit_serial",
              [randint(0, 255).to_bytes(1, "big") for _ in range(4)]),
-        Case("32_bit_serial",
-             [randint(0, 2 ** 31 - 1).to_bytes(4, "big") for _ in range(4)]),
-        Case("trigger_overflow", [b"FF" for _ in range(100)]),
+        # TODO: For now only 8 bit input is supported.
+        # Case("24_bit", [b"\x61\x62\x63"]),
+        # Case("32_bit_random", [randint(0, 2 ** 31 - 1).to_bytes(4, "big")]),
+        # Case("IEND", [b"\x49\x45\x4e\x44"]),
+        # Case("32_bit_serial",
+        #      [randint(0, 2 ** 31 - 1).to_bytes(4, "big") for _ in range(4)]),
+        # Case("trigger_overflow", [b"FF" for _ in range(100)]),
     ]
 
     for case in testcases:

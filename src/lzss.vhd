@@ -135,7 +135,7 @@ begin
           if (v_int_match_offset = 0) then
             -- literal
             int_datums_to_fill <= 1;
-            state <= SEND_OUTPUT;
+            state              <= SEND_OUTPUT;
           else
             -- match
             state <= FIND_MATCH_LENGTH;
@@ -156,7 +156,7 @@ begin
           rec_best_match <= (v_int_match_offset, v_int_match_length, a_buffer(-v_int_match_length));
 
           int_datums_to_fill <= v_int_match_length;
-          state <= SEND_OUTPUT;
+          state              <= SEND_OUTPUT;
 
         when SEND_OUTPUT =>
           if (isl_get = '1') then

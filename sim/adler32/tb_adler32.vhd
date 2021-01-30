@@ -26,8 +26,8 @@ architecture tb of tb_adler32 is
   signal sl_start : std_logic := '0';
   signal sl_valid_in : std_logic := '0';
   signal slv_data_in : std_logic_vector(C_INPUT_BITWIDTH-1 downto 0) := (others => '0');
-  signal sl_valid_out : std_logic := '0';
   signal slv_data_out : std_logic_vector(31 downto 0) := (others => '0');
+  signal sl_ready : std_logic := '0';
 
   shared variable data_src : integer_array_t;
   shared variable data_ref : integer_array_t;
@@ -44,7 +44,8 @@ begin
     isl_start   => sl_start,
     isl_valid   => sl_valid_in,
     islv_data   => slv_data_in,
-    oslv_data   => slv_data_out
+    oslv_data   => slv_data_out,
+    osl_ready   => sl_ready
   );
   
   clk_gen(sl_clk, 10 ns);
@@ -74,10 +75,10 @@ begin
     sl_start <= '0';
     wait until rising_edge(sl_clk);
 
-    for i in 0 to width(data_src)-1 loop
-      wait until rising_edge(sl_clk);
+    for i in 0 to width(data_src) - 1 loop
+      wait until rising_edge(sl_clk) and sl_ready = '1';
       sl_valid_in <= '1';
-      slv_data_in <= std_logic_vector(to_signed(get(data_src, i, 0), slv_data_in'length));
+      slv_data_in <= std_logic_vector(to_unsigned(get(data_src, i, 0), slv_data_in'length));
       wait until rising_edge(sl_clk);
       sl_valid_in <= '0';
     end loop;
@@ -92,7 +93,11 @@ begin
     data_check_done <= false;
 
     wait until rising_edge(sl_clk) and stimuli_done;
-    check_equal(slv_data_out, std_logic_vector(to_signed(get(data_ref, 0, 0), slv_data_out'length)));
+    -- 3 cycles delay
+    wait until rising_edge(sl_clk);
+    wait until rising_edge(sl_clk);
+    wait until rising_edge(sl_clk);
+    check_equal(slv_data_out, std_logic_vector(to_unsigned(get(data_ref, 0, 0), slv_data_out'length)));
     
     report ("Done checking");
     data_check_done <= true;

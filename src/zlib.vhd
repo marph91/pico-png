@@ -55,6 +55,7 @@ architecture behavioral of zlib is
   signal sl_rdy_deflate         : std_logic := '0';
 
   signal slv_data_adler32 : std_logic_vector(31 downto 0) := (others => '0');
+  signal sl_ready_adler32 : std_logic := '0';
 
   type t_states is (IDLE, HEADERS, DEFLATE, ADLER32);
 
@@ -99,7 +100,8 @@ begin
       isl_start => isl_start,
       isl_valid => isl_valid,
       islv_data => islv_data,
-      oslv_data => slv_data_adler32
+      oslv_data => slv_data_adler32,
+      osl_ready => sl_ready_adler32
     );
 
   proc_fsm : process (isl_clk) is
@@ -166,7 +168,7 @@ begin
 
   osl_valid <= sl_valid_out;
   oslv_data <= slv_data_out;
-  osl_rdy   <= sl_rdy_deflate when state = DEFLATE else
+  osl_rdy   <= sl_rdy_deflate and sl_ready_adler32 when state = DEFLATE else
                '0';
 
 end architecture behavioral;

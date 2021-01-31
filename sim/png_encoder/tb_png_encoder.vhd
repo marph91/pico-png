@@ -29,6 +29,7 @@ entity tb_png_encoder is
 
     C_INPUT_BUFFER_SIZE  : integer;
     C_SEARCH_BUFFER_SIZE : integer;
+    C_MAX_MATCH_LENGTH_USER : integer;
 
     C_BTYPE              : integer;
 
@@ -60,6 +61,7 @@ begin
 
     C_INPUT_BUFFER_SIZE => C_INPUT_BUFFER_SIZE,
     C_SEARCH_BUFFER_SIZE => C_SEARCH_BUFFER_SIZE,
+    C_MAX_MATCH_LENGTH_USER => C_MAX_MATCH_LENGTH_USER,
 
     C_BTYPE => C_BTYPE,
 

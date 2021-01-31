@@ -171,6 +171,7 @@ def create_test_suite(tb_lib):
             "C_SEARCH_BUFFER_SIZE": 12,
             "C_BTYPE": case.block_type,
             "C_ROW_FILTER_TYPE": case.row_filter,
+            "C_MAX_MATCH_LENGTH_USER": 7,
         }
         tb_deflate.add_config(
             name=case.id_, generics=generics,

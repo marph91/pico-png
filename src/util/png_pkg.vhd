@@ -241,7 +241,7 @@ package body png_pkg is
 
     -- 1 bit match, distance/offset, length
     v_int_match_offset := log2(search_buffer_size);
-    v_int_match_length := log2(min_int(input_buffer_size, max_match_length_user));
+    v_int_match_length := log2(min_int(input_buffer_size, max_match_length_user) + 1);
     -- At least 8 bit are needed to represent a literal.
     if (v_int_match_offset + v_int_match_length < 8) then
       report "Input and search buffer too small. Output bitwidth will be extended to 8 bit." severity warning;

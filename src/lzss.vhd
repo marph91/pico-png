@@ -62,8 +62,8 @@ architecture behavioral of lzss is
 
   -- Helper signals to visualize the output better.
   signal slv_literal_data : std_logic_vector(oslv_data'high - 1 downto oslv_data'low);
-  signal slv_match_offset : std_logic_vector(max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH)) - 1 downto 0);
-  signal slv_match_length : std_logic_vector(log2(C_MAX_MATCH_LENGTH) - 1 downto 0);
+  signal slv_match_offset : std_logic_vector(max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH + 1)) - 1 downto 0);
+  signal slv_match_length : std_logic_vector(log2(C_MAX_MATCH_LENGTH + 1) - 1 downto 0);
 
 begin
 
@@ -162,6 +162,8 @@ begin
           state              <= SEND_OUTPUT;
 
         when SEND_OUTPUT =>
+          report "aaa " & to_string(rec_best_match.int_offset) & " " & to_string(max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH)));
+          report "aaa " & to_string(rec_best_match.int_length) & " " & to_string(log2(C_MAX_MATCH_LENGTH));
           if (isl_get = '1') then
             sl_valid_out <= '1';
 
@@ -184,8 +186,8 @@ begin
   slv_literal_data <= a_buffer(0) & C_ZEROS(C_ZEROS'length - a_buffer(0)'length - 2 downto 0);
   -- In case of a match, assure that the output bitwidth is at least 8.
   -- 8 bits are needed to represent a literal.
-  slv_match_offset <= std_logic_vector(to_unsigned(rec_best_match.int_offset, max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH))));
-  slv_match_length <= std_logic_vector(to_unsigned(rec_best_match.int_length, log2(C_MAX_MATCH_LENGTH)));
+  slv_match_offset <= std_logic_vector(to_unsigned(rec_best_match.int_offset, max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH + 1))));
+  slv_match_length <= std_logic_vector(to_unsigned(rec_best_match.int_length, log2(C_MAX_MATCH_LENGTH + 1)));
 
   oslv_data <= '0' & slv_literal_data when int_datums_to_fill = 1 else
                '1' & slv_match_offset & slv_match_length;

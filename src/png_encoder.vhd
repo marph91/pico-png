@@ -32,7 +32,7 @@ entity png_encoder is
     -- LZSS parameters
     C_INPUT_BUFFER_SIZE     : integer range 3 to 258   := 12;
     C_SEARCH_BUFFER_SIZE    : integer range 1 to 32768 := 12;
-    C_MAX_MATCH_LENGTH_USER : integer                  := 32;
+    C_MAX_MATCH_LENGTH_USER : integer                  := 7;
 
     -- 0: no compression
     -- 1: huffman encoding with a fixed table

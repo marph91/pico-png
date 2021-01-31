@@ -49,7 +49,7 @@ class Case:
     def data_out_int(self) -> List[int]:
         match_offset = lb(self.search_buffer_size)
         match_length = lb(
-            min(self.input_buffer_size, self.max_match_length))
+            min(self.input_buffer_size, self.max_match_length) + 1)
         # Assure a bitwidth of at least 8 bit. See also "lzss.vhd".
         if match_offset + match_length < 8:
             match_offset = 8 - match_length
@@ -94,8 +94,11 @@ def create_test_suite(tb_lib):
              [i for i in range(30)], [Literal(i) for i in range(30)]),
         Case("rle", 5, 5, max_match_length, [0, 0, 0, 0, 1],
              [Literal(0), Match(1, 3), Literal(1)]),
-        Case("rle_max_length", 16, 5, 16, [0]*17 + [1],
+        Case("max_match_length", 16, 5, 16, [0] * 17 + [1],
              [Literal(0), Match(1, 16), Literal(1)]),
+        Case("max_match_offset", 4, 8, 4, [0, 1, 2, 3] * 3,
+             [Literal(0), Literal(1), Literal(2), Literal(3),
+              Match(4, 4), Match(8, 4)]),
         Case("repeat", 11, 10, max_match_length,
              [0, 1, 2, 0, 1, 2, 0, 1, 2, 0],
              [Literal(0), Literal(1), Literal(2), Match(3, 7)]),

@@ -145,12 +145,13 @@ begin
           -- Get the length of the match if a matching element was found.
           -- I. e. try to match the next elements of search and input buffer.
 
-          -- Note: v_int_match_length and match_length are one-based, input buffer is zero-based.
+          -- Note: v_int_match_length is one-based, match_length and input buffer are zero-based.
           v_int_match_length := C_MAX_MATCH_LENGTH;
-          for match_length in C_MIN_MATCH_LENGTH + 1 to C_MAX_MATCH_LENGTH loop
-            if (a_buffer(v_int_match_offset - match_length + 1) /= a_buffer(-match_length + 1)) then
-              v_int_match_length := match_length - 1;
+          for match_length in C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH - 1 loop
+            if (a_buffer(v_int_match_offset - match_length) /= a_buffer(-match_length)) then
               -- Don't look for further matches, since we got a mismatch.
+              -- Assign the match length of the last loop, since it was the last match.
+              v_int_match_length := match_length;
               exit;
             end if;
           end loop;

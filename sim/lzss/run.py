@@ -79,6 +79,7 @@ def create_test_suite(tb_lib):
 
     tb_lzss = tb_lib.entity("tb_lzss")
 
+    # TODO: Add test cases for max_match_length < input_buffer_size
     max_match_length = 32
 
     # https://de.wikibooks.org/wiki/Datenkompression:_Verlustfreie_Verfahren:_W%C3%B6rterbuchbasierte_Verfahren:_LZSS
@@ -93,8 +94,8 @@ def create_test_suite(tb_lib):
              [i for i in range(30)], [Literal(i) for i in range(30)]),
         Case("rle", 5, 5, max_match_length, [0, 0, 0, 0, 1],
              [Literal(0), Match(1, 3), Literal(1)]),
-        Case("rle_max_length", 20, 5, max_match_length, [0]*21 + [1],
-             [Literal(0), Match(1, 20), Literal(1)]),
+        Case("rle_max_length", 16, 5, 16, [0]*17 + [1],
+             [Literal(0), Match(1, 16), Literal(1)]),
         Case("repeat", 11, 10, max_match_length,
              [0, 1, 2, 0, 1, 2, 0, 1, 2, 0],
              [Literal(0), Literal(1), Literal(2), Match(3, 7)]),

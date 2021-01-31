@@ -55,7 +55,7 @@ package body png_pkg is
     elsif (color_type = 6) then
       return 4; -- RGB with alpha
     else
-      assert false report "invalid color type " & to_string(color_type);
+      report "invalid color type " & to_string(color_type) severity error;
     end if;
 
   end;
@@ -245,11 +245,6 @@ package body png_pkg is
     -- At least 8 bit are needed to represent a literal.
     if (v_int_match_offset + v_int_match_length < 8) then
       report "Input and search buffer too small. Output bitwidth will be extended to 8 bit." severity warning;
-      -- TODO: report the ghdl bug
-      -- synthesis translate off
-      report to_string(search_buffer_size) & " " & to_string(v_int_match_offset) & " " &
-             to_string(input_buffer_size) & " " & to_string(v_int_match_length);
-      -- synthesis translate on
       return 1 + 8;
     end if;
 

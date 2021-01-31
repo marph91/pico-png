@@ -81,7 +81,7 @@ begin
               slv_last_pixel_data <= islv_data;
             end if;
           else
-            assert false report "Row filter type " & to_string(C_ROW_FILTER_TYPE) & " not yet implemented.";
+            report "Row filter type " & to_string(C_ROW_FILTER_TYPE) & " not yet implemented." severity error;
           end if;
           sl_valid_out <= isl_valid;
           sl_rdy       <= '1';

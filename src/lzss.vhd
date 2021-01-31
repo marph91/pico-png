@@ -165,8 +165,6 @@ begin
           state              <= SEND_OUTPUT;
 
         when SEND_OUTPUT =>
-          report "aaa " & to_string(rec_best_match.int_offset) & " " & to_string(max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH)));
-          report "aaa " & to_string(rec_best_match.int_length) & " " & to_string(log2(C_MAX_MATCH_LENGTH));
           if (isl_get = '1') then
             sl_valid_out <= '1';
 

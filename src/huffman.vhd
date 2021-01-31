@@ -273,7 +273,7 @@ begin
             elsif (v_int_match_length = 258) then
               v_int_code := 285;
             else
-              assert false report "invalid length" & to_string(v_int_match_length);
+              report "invalid length" & to_string(v_int_match_length) severity error;
             end if;
 
             if (v_int_match_length <= 114) then
@@ -315,7 +315,7 @@ begin
               v_int_bitwidth    := 5;
               v_int_start_value := 131;
             else
-              assert false report "invalid length" & to_string(v_int_match_length);
+              report "invalid length" & to_string(v_int_match_length) severity error;
             end if;
 
             report "EXTRA_LENGTH_BITS " &
@@ -390,7 +390,7 @@ begin
             elsif (v_int_match_distance <= 32768) then
               v_int_code := 29;
             else
-              assert false report "invalid distance" & to_string(v_int_match_distance);
+              report "invalid distance" & to_string(v_int_match_distance) severity error;
             end if;
 
             report "DISTANCE_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_int_code);
@@ -450,7 +450,7 @@ begin
               v_int_bitwidth    := 13;
               v_int_start_value := 16384;
             else
-              assert false report "invalid distance" & to_string(v_int_match_distance);
+              report "invalid distance" & to_string(v_int_match_distance) severity error;
             end if;
 
             report "EXTRA_DISTANCE_BITS " &

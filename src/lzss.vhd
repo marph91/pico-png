@@ -8,9 +8,10 @@ library util;
 
 entity lzss is
   generic (
-    C_INPUT_BUFFER_SIZE  : integer range 3 to 258   := 10;
-    C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
-    C_MIN_MATCH_LENGTH   : integer range 3 to 16    := 3
+    C_INPUT_BUFFER_SIZE     : integer range 3 to 258   := 10;
+    C_SEARCH_BUFFER_SIZE    : integer range 1 to 32768 := 12;
+    C_MIN_MATCH_LENGTH      : integer range 3 to 16    := 3;
+    C_MAX_MATCH_LENGTH_USER : integer                  := 8
   );
   port (
     isl_clk    : in    std_logic;
@@ -18,7 +19,7 @@ entity lzss is
     isl_get    : in    std_logic;
     isl_valid  : in    std_logic;
     islv_data  : in    std_logic_vector(7 downto 0);
-    oslv_data  : out   std_logic_vector(calc_huffman_bitwidth(1, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE) - 1 downto 0);
+    oslv_data  : out   std_logic_vector(calc_huffman_bitwidth(1, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER) - 1 downto 0);
     osl_valid  : out   std_logic;
     osl_finish : out   std_logic;
     osl_rdy    : out   std_logic
@@ -27,8 +28,7 @@ end entity lzss;
 
 architecture behavioral of lzss is
 
-  -- TODO: check the length
-  constant C_MAX_MATCH_LENGTH : integer := min_int(C_SEARCH_BUFFER_SIZE, C_INPUT_BUFFER_SIZE - 1);
+  constant C_MAX_MATCH_LENGTH : integer := get_max_match_length(C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER);
 
   -- 0 is part of the input buffer:
   -- search buffer: C_SEARCH_BUFFER_SIZE + 1 downto 1
@@ -40,8 +40,8 @@ architecture behavioral of lzss is
 
   type t_match is record
     -- Maximum is 15 bit distance/offset and 8 bit length.
-    int_offset     : integer range 0 to 2 ** C_INPUT_BUFFER_SIZE - 1;
-    int_length     : integer range 0 to 2 ** C_SEARCH_BUFFER_SIZE - 1;
+    int_offset     : integer range 0 to C_SEARCH_BUFFER_SIZE;
+    int_length     : integer range 0 to C_MAX_MATCH_LENGTH;
     slv_next_datum : std_logic_vector(7 downto 0);
   end record t_match;
 
@@ -62,8 +62,8 @@ architecture behavioral of lzss is
 
   -- Helper signals to visualize the output better.
   signal slv_literal_data : std_logic_vector(oslv_data'high - 1 downto oslv_data'low);
-  signal slv_match_offset : std_logic_vector(log2(C_INPUT_BUFFER_SIZE) - 1 downto 0);
-  signal slv_match_length : std_logic_vector(log2(C_SEARCH_BUFFER_SIZE) - 1 downto 0);
+  signal slv_match_offset : std_logic_vector(max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH)) - 1 downto 0);
+  signal slv_match_length : std_logic_vector(log2(C_MAX_MATCH_LENGTH) - 1 downto 0);
 
 begin
 
@@ -179,8 +179,10 @@ begin
 
   -- In case of a literal (no match found), fill the output data with zeros.
   slv_literal_data <= a_buffer(0) & C_ZEROS(C_ZEROS'length - a_buffer(0)'length - 2 downto 0);
-  slv_match_offset <= std_logic_vector(to_unsigned(rec_best_match.int_offset, log2(C_INPUT_BUFFER_SIZE)));
-  slv_match_length <= std_logic_vector(to_unsigned(rec_best_match.int_length, log2(C_SEARCH_BUFFER_SIZE)));
+  -- In case of a match, assure that the output bitwidth is at least 8.
+  -- 8 bits are needed to represent a literal.
+  slv_match_offset <= std_logic_vector(to_unsigned(rec_best_match.int_offset, max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH))));
+  slv_match_length <= std_logic_vector(to_unsigned(rec_best_match.int_length, log2(C_MAX_MATCH_LENGTH)));
 
   oslv_data <= '0' & slv_literal_data when int_datums_to_fill = 1 else
                '1' & slv_match_offset & slv_match_length;

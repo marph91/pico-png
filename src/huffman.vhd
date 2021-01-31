@@ -8,8 +8,9 @@ library util;
 
 entity huffman is
   generic (
-    C_BTYPE          : integer range 0 to 3 := 1;
-    C_INPUT_BITWIDTH : integer              := 17
+    C_BTYPE             : integer range 0 to 3 := 1;
+    C_INPUT_BITWIDTH    : integer              := 17;
+    C_MATCH_LENGTH_BITS : integer
   );
   port (
     isl_clk    : in    std_logic;
@@ -214,6 +215,8 @@ begin
               v_int_code     := 256 + v_int_literal_value;
             end if;
 
+            report "LITERAL " & to_string(buffer64.int_current_index) & " " & to_string(v_int_code);
+
             barrel_shifter.sl_valid_in   <= '1';
             barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_int_code, 13));
             barrel_shifter.int_bits      <= v_int_bitwidth;
@@ -223,8 +226,8 @@ begin
             state <= SEND_BYTES;
 
           when LENGTH_CODE =>
-            -- TODO: Adapt bitwidth to buffer size.
-            v_int_match_length := to_integer(unsigned(slv_current_value(3 downto 0)));
+            v_int_match_length := to_integer(unsigned(slv_current_value(C_MATCH_LENGTH_BITS - 1 downto 0)));
+
             if (v_int_match_length <= 10) then
               v_int_code := 254 + v_int_match_length;
             elsif (v_int_match_length <= 12) then
@@ -329,9 +332,8 @@ begin
             state <= DISTANCE_CODE;
 
           when DISTANCE_CODE =>
-            -- 5 bit distance code
-            -- TODO: Adapt bitwidth to buffer size.
-            v_int_match_distance := to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto 4)));
+            -- distance code
+            v_int_match_distance := to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto C_MATCH_LENGTH_BITS)));
 
             if (v_int_match_distance <= 4) then
               v_int_code := v_int_match_distance - 1;

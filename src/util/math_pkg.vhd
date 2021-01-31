@@ -2,6 +2,8 @@ package math_pkg is
 
   function log2 (x : integer) return integer;
 
+  function max_int (l, r : integer) return integer;
+
   function min_int (l, r : integer) return integer;
 
 end package math_pkg;
@@ -18,6 +20,19 @@ package body math_pkg is
     end loop;
     return i;
   end function log2;
+
+  -- chose the maximum of two integer
+
+  function max_int (l, r : integer) return integer is
+  begin
+
+    if (l > r) then
+      return l;
+    else
+      return r;
+    end if;
+
+  end max_int;
 
   -- chose the minimum of two integer
 

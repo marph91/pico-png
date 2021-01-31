@@ -41,24 +41,34 @@ class Case:
     name: str
     input_buffer_size: int
     search_buffer_size: int
+    max_match_length: int
     data_in: List[int]
     data_out: List[Union[Literal, Match]]
 
     @property
     def data_out_int(self) -> List[int]:
-        buffer_size = lb(self.input_buffer_size) + lb(self.search_buffer_size)
+        match_offset = lb(self.search_buffer_size)
+        # self.input_buffer_size - 1, because input buffer starts at 0.
+        match_length = lb(min(
+            min(self.input_buffer_size - 1, self.search_buffer_size),
+            self.max_match_length))
+        # Assure a bitwidth of at least 8 bit. See also "lzss.vhd".
+        if match_offset + match_length < 8:
+            match_offset = 8 - match_length
+        buffer_size = match_offset + match_length
+
         data_out_int = []
         for datum in self.data_out:
             if isinstance(datum, Literal):
-                # match structure:
-                # MSB: 1 (match), match offset, match length
-                value_int = datum.value << max(0, buffer_size - 8)
-            else:
                 # non match structure:
                 # MSB: 0 (non match), literal data, rest is ignored
+                value_int = datum.value << (buffer_size - 8)
+            else:
+                # match structure:
+                # MSB: 1 (match), match offset, match length
                 value_int = (
                     (1 << buffer_size) +
-                    (datum.offset << lb(self.search_buffer_size)) +
+                    (datum.offset << match_length) +
                     datum.length
                 )
             data_out_int.append(value_int)
@@ -71,6 +81,8 @@ def create_test_suite(tb_lib):
 
     tb_lzss = tb_lib.entity("tb_lzss")
 
+    max_match_length = 32
+
     # https://de.wikibooks.org/wiki/Datenkompression:_Verlustfreie_Verfahren:_W%C3%B6rterbuchbasierte_Verfahren:_LZSS
     # J. Storer, T.Szymanski. Data Compression via Textual Substitution.
     complex_sentence = "In Ulm, um Ulm, und um Ulm herum."
@@ -80,19 +92,17 @@ def create_test_suite(tb_lib):
 
     testcases = [
         # TODO: refactor: abstract literal and match
-        Case("no_compression", 10, 12, [i for i in range(30)],
-             [Literal(i) for i in range(30)]),
-        # Case("rle", 5, 5, [0, 0, 0, 0, 1],
-        #      [gen_literal(0, 5, 5),
-        #       (1 << lb(5) + lb(5)) + (1 << lb(5)) + 3,
-        #       gen_literal(1, 5, 5)
-        #      ]),
-        Case("rle_max_length", 20, 5, [0]*20 + [1],
+        Case("no_compression", 10, 12, max_match_length,
+             [i for i in range(30)], [Literal(i) for i in range(30)]),
+        Case("rle", 5, 5, max_match_length, [0, 0, 0, 0, 1],
+             [Literal(0), Match(1, 3), Literal(1)]),
+        Case("rle_max_length", 20, 5, max_match_length, [0]*20 + [1],
              [Literal(0), Match(1, 5), Match(5, 5), Match(5, 5), Match(5, 4),
               Literal(1)]),
-        Case("repeat", 11, 10, [0, 1, 2, 0, 1, 2, 0, 1, 2, 0],
+        Case("repeat", 11, 10, max_match_length,
+             [0, 1, 2, 0, 1, 2, 0, 1, 2, 0],
              [Literal(0), Literal(1), Literal(2), Match(3, 7)]),
-        Case("complex", 10, 12, complex_list,
+        Case("complex", 10, 12, max_match_length, complex_list,
              [Literal(0), Literal(1), Literal(2), Literal(3), Literal(4),
               Literal(5), Literal(6), Literal(2), Literal(7), Literal(5),
               Match(8, 7), Literal(encode_dict["n"]),
@@ -105,6 +115,8 @@ def create_test_suite(tb_lib):
               Literal(encode_dict["m"]),
               Literal(encode_dict["."]),
              ]),
+        Case("match_at_max_size", 3, 3, 4, [0, 1, 2, 0, 1, 2],
+             [Literal(0), Literal(1), Literal(2), Match(3, 3)]),
     ]
 
     for case in testcases:
@@ -113,6 +125,7 @@ def create_test_suite(tb_lib):
             "C_INPUT_BUFFER_SIZE": case.input_buffer_size,
             "C_SEARCH_BUFFER_SIZE": case.search_buffer_size,
             "C_MIN_MATCH_LENGTH": 3,
+            "C_MAX_MATCH_LENGTH_USER": case.max_match_length,
         }
         tb_lzss.add_config(
             name=case.name, generics=generics,

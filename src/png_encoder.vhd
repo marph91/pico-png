@@ -29,8 +29,10 @@ entity png_encoder is
     -- 6: truecolor with alpha
     C_COLOR_TYPE : integer range 0 to 6 := 2;
 
-    C_INPUT_BUFFER_SIZE  : integer range 3 to 258   := 12;
-    C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
+    -- LZSS parameters
+    C_INPUT_BUFFER_SIZE     : integer range 3 to 258   := 12;
+    C_SEARCH_BUFFER_SIZE    : integer range 1 to 32768 := 12;
+    C_MAX_MATCH_LENGTH_USER : integer                  := 32;
 
     -- 0: no compression
     -- 1: huffman encoding with a fixed table
@@ -153,10 +155,10 @@ begin
 
   i_zlib : entity png_lib.zlib
     generic map (
-      C_INPUT_BUFFER_SIZE  => C_INPUT_BUFFER_SIZE,
-      C_SEARCH_BUFFER_SIZE => C_SEARCH_BUFFER_SIZE,
-
-      C_BTYPE => C_BTYPE
+      C_INPUT_BUFFER_SIZE     => C_INPUT_BUFFER_SIZE,
+      C_SEARCH_BUFFER_SIZE    => C_SEARCH_BUFFER_SIZE,
+      C_BTYPE                 => C_BTYPE,
+      C_MAX_MATCH_LENGTH_USER => C_MAX_MATCH_LENGTH_USER
     )
     port map (
       isl_clk    => isl_clk,

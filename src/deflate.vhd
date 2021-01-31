@@ -10,10 +10,10 @@ library util;
 
 entity deflate is
   generic (
-    C_INPUT_BUFFER_SIZE  : integer range 3 to 258   := 12;
-    C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
-
-    C_BTYPE : integer range 0 to 3 := 1
+    C_INPUT_BUFFER_SIZE     : integer range 3 to 258   := 12;
+    C_SEARCH_BUFFER_SIZE    : integer range 1 to 32768 := 12;
+    C_BTYPE                 : integer range 0 to 3     := 1;
+    C_MAX_MATCH_LENGTH_USER : integer                  := 8
   );
   port (
     isl_clk    : in    std_logic;
@@ -32,7 +32,7 @@ architecture behavioral of deflate is
   signal sl_valid_in_lzss  : std_logic := '0';
   signal slv_data_in_lzss  : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out_lzss : std_logic := '0';
-  signal slv_data_out_lzss : std_logic_vector(calc_huffman_bitwidth(C_BTYPE, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE) - 1 downto 0) := (others => '0');
+  signal slv_data_out_lzss : std_logic_vector(calc_huffman_bitwidth(C_BTYPE, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER) - 1 downto 0) := (others => '0');
   signal sl_finish_lzss    : std_logic := '0';
   signal sl_rdy_lzss       : std_logic := '0';
 
@@ -53,8 +53,9 @@ begin
 
     i_lzss : entity png_lib.lzss
       generic map (
-        C_INPUT_BUFFER_SIZE  => C_INPUT_BUFFER_SIZE,
-        C_SEARCH_BUFFER_SIZE => C_SEARCH_BUFFER_SIZE
+        C_INPUT_BUFFER_SIZE     => C_INPUT_BUFFER_SIZE,
+        C_SEARCH_BUFFER_SIZE    => C_SEARCH_BUFFER_SIZE,
+        C_MAX_MATCH_LENGTH_USER => C_MAX_MATCH_LENGTH_USER
       )
       port map (
         isl_clk    => isl_clk,
@@ -72,8 +73,9 @@ begin
 
   i_huffman : entity png_lib.huffman
     generic map (
-      C_BTYPE          => C_BTYPE,
-      C_INPUT_BITWIDTH => calc_huffman_bitwidth(C_BTYPE, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE)
+      C_BTYPE             => C_BTYPE,
+      C_INPUT_BITWIDTH    => calc_huffman_bitwidth(C_BTYPE, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER),
+      C_MATCH_LENGTH_BITS => log2(get_max_match_length(C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER))
     )
     port map (
       isl_clk    => isl_clk,

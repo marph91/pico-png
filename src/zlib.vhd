@@ -9,10 +9,10 @@ library util;
 
 entity zlib is
   generic (
-    C_INPUT_BUFFER_SIZE  : integer range 3 to 258   := 10;
-    C_SEARCH_BUFFER_SIZE : integer range 1 to 32768 := 12;
-
-    C_BTYPE : integer range 0 to 3 := 1
+    C_INPUT_BUFFER_SIZE     : integer range 3 to 258   := 10;
+    C_SEARCH_BUFFER_SIZE    : integer range 1 to 32768 := 12;
+    C_BTYPE                 : integer range 0 to 3     := 1;
+    C_MAX_MATCH_LENGTH_USER : integer                  := 8
   );
   port (
     isl_clk    : in    std_logic;
@@ -76,9 +76,10 @@ begin
 
   i_deflate : entity png_lib.deflate
     generic map (
-      C_INPUT_BUFFER_SIZE  => C_INPUT_BUFFER_SIZE,
-      C_SEARCH_BUFFER_SIZE => C_SEARCH_BUFFER_SIZE,
-      C_BTYPE              => C_BTYPE
+      C_INPUT_BUFFER_SIZE     => C_INPUT_BUFFER_SIZE,
+      C_SEARCH_BUFFER_SIZE    => C_SEARCH_BUFFER_SIZE,
+      C_BTYPE                 => C_BTYPE,
+      C_MAX_MATCH_LENGTH_USER => C_MAX_MATCH_LENGTH_USER
     )
     port map (
       isl_clk    => isl_clk,

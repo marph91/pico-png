@@ -20,7 +20,8 @@ entity tb_lzss is
     id                   : string;
     C_INPUT_BUFFER_SIZE  : integer;
     C_SEARCH_BUFFER_SIZE : integer;
-    C_MIN_MATCH_LENGTH   : integer
+    C_MIN_MATCH_LENGTH   : integer;
+    C_MAX_MATCH_LENGTH_USER : integer
   );
 end entity;
 
@@ -31,7 +32,7 @@ architecture tb of tb_lzss is
   signal sl_valid_in : std_logic := '0';
   signal slv_data_in : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out : std_logic := '0';
-  signal slv_data_out : std_logic_vector(calc_huffman_bitwidth(1, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE) - 1 downto 0);
+  signal slv_data_out : std_logic_vector(calc_huffman_bitwidth(1, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER) - 1 downto 0);
   signal sl_rdy : std_logic := '0';
 
   shared variable data_src : integer_array_t;
@@ -44,7 +45,8 @@ begin
   generic map (
     C_INPUT_BUFFER_SIZE    => C_INPUT_BUFFER_SIZE,
     C_SEARCH_BUFFER_SIZE   => C_SEARCH_BUFFER_SIZE,
-    C_MIN_MATCH_LENGTH     => C_MIN_MATCH_LENGTH
+    C_MIN_MATCH_LENGTH     => C_MIN_MATCH_LENGTH,
+    C_MAX_MATCH_LENGTH_USER => C_MAX_MATCH_LENGTH_USER
   )
   port map (
     isl_clk     => sl_clk,

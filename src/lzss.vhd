@@ -57,6 +57,8 @@ architecture behavioral of lzss is
   signal int_datums_to_flush : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
   signal sl_last_input       : std_logic := '0';
 
+  signal int_match_offset : integer range 0 to C_SEARCH_BUFFER_SIZE;
+
   -- Only needed to pad the output signal.
   constant C_ZEROS : std_logic_vector(oslv_data'range) := (others => '0');
 
@@ -125,7 +127,7 @@ begin
           -- in the search buffer.
           v_int_match_offset := 0;
           for current_index in 1 to C_SEARCH_BUFFER_SIZE loop
-            -- TODO: We look a bit in the input buffer for searching.
+            -- TODO: We look in the input buffer for searching.
             if (a_buffer(current_index downto current_index - C_MIN_MATCH_LENGTH + 1) =
                 a_buffer(0 downto - C_MIN_MATCH_LENGTH + 1)) then
               v_int_match_offset := current_index;
@@ -139,6 +141,7 @@ begin
           else
             -- match
             state <= FIND_MATCH_LENGTH;
+            int_match_offset <= v_int_match_offset;
           end if;
 
         when FIND_MATCH_LENGTH =>
@@ -148,7 +151,7 @@ begin
           -- Note: v_int_match_length is one-based, match_length and input buffer are zero-based.
           v_int_match_length := C_MAX_MATCH_LENGTH;
           for match_length in C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH - 1 loop
-            if (a_buffer(v_int_match_offset - match_length) /= a_buffer(-match_length)) then
+            if (a_buffer(int_match_offset - match_length) /= a_buffer(-match_length)) then
               -- Don't look for further matches, since we got a mismatch.
               -- Assign the match length of the last loop, since it was the last match.
               v_int_match_length := match_length;
@@ -156,7 +159,7 @@ begin
             end if;
           end loop;
 
-          rec_best_match <= (v_int_match_offset, v_int_match_length, a_buffer(-v_int_match_length + 1));
+          rec_best_match <= (int_match_offset, v_int_match_length, a_buffer(-v_int_match_length + 1));
 
           int_datums_to_fill <= v_int_match_length;
           state              <= SEND_OUTPUT;

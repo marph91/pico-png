@@ -48,10 +48,8 @@ class Case:
     @property
     def data_out_int(self) -> List[int]:
         match_offset = lb(self.search_buffer_size)
-        # self.input_buffer_size - 1, because input buffer starts at 0.
-        match_length = lb(min(
-            min(self.input_buffer_size - 1, self.search_buffer_size),
-            self.max_match_length))
+        match_length = lb(
+            min(self.input_buffer_size, self.max_match_length))
         # Assure a bitwidth of at least 8 bit. See also "lzss.vhd".
         if match_offset + match_length < 8:
             match_offset = 8 - match_length
@@ -91,14 +89,12 @@ def create_test_suite(tb_lib):
     complex_list = [encode_dict[letter] for letter in complex_sentence]
 
     testcases = [
-        # TODO: refactor: abstract literal and match
         Case("no_compression", 10, 12, max_match_length,
              [i for i in range(30)], [Literal(i) for i in range(30)]),
         Case("rle", 5, 5, max_match_length, [0, 0, 0, 0, 1],
              [Literal(0), Match(1, 3), Literal(1)]),
-        Case("rle_max_length", 20, 5, max_match_length, [0]*20 + [1],
-             [Literal(0), Match(1, 5), Match(5, 5), Match(5, 5), Match(5, 4),
-              Literal(1)]),
+        Case("rle_max_length", 20, 5, max_match_length, [0]*21 + [1],
+             [Literal(0), Match(1, 20), Literal(1)]),
         Case("repeat", 11, 10, max_match_length,
              [0, 1, 2, 0, 1, 2, 0, 1, 2, 0],
              [Literal(0), Literal(1), Literal(2), Match(3, 7)]),

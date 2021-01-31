@@ -36,11 +36,6 @@ package png_pkg is
     constant search_buffer_size : integer range 1 to 32768;
     constant max_match_length_user : integer) return integer;
 
-  function get_max_match_length (
-    constant input_buffer_size : integer range 3 to 258;
-    constant search_buffer_size : integer range 1 to 32768;
-    constant max_match_length_user : integer) return integer;
-
 end package png_pkg;
 
 package body png_pkg is
@@ -246,9 +241,7 @@ package body png_pkg is
 
     -- 1 bit match, distance/offset, length
     v_int_match_offset := log2(search_buffer_size);
-    v_int_match_length := log2(get_max_match_length(input_buffer_size,
-                                                    search_buffer_size,
-                                                    max_match_length_user));
+    v_int_match_length := log2(min_int(input_buffer_size, max_match_length_user));
     -- At least 8 bit are needed to represent a literal.
     if (v_int_match_offset + v_int_match_length < 8) then
       report "Input and search buffer too small. Output bitwidth will be extended to 8 bit." severity warning;
@@ -258,20 +251,6 @@ package body png_pkg is
     end if;
 
     return 1 + v_int_match_offset + v_int_match_length;
-  end function;
-
-  function get_max_match_length (
-    constant input_buffer_size : integer range 3 to 258;
-    constant search_buffer_size : integer range 1 to 32768;
-    constant max_match_length_user : integer) return integer is
-  begin
-
-    -- input_buffer_size - 1, because input buffer starts at 0.
-    -- Search buffer starts at 1.
-    return min_int(
-      min_int(input_buffer_size - 1, search_buffer_size),
-      max_match_length_user);
-
   end function;
 
 end png_pkg;

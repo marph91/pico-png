@@ -140,7 +140,7 @@ begin
             state              <= SEND_OUTPUT;
           else
             -- match
-            state <= FIND_MATCH_LENGTH;
+            state            <= FIND_MATCH_LENGTH;
             int_match_offset <= v_int_match_offset;
           end if;
 

@@ -8,6 +8,7 @@ rm -rf build
 mkdir -p build
 cd build
 
+ghdl -a --std=08 --work=util "$ROOT/src/util/huffman_pkg.vhd"
 ghdl -a --std=08 --work=util "$ROOT/src/util/math_pkg.vhd"
 ghdl -a --std=08 --work=util "$ROOT/src/util/png_pkg.vhd"
 ghdl -a --std=08 --work=png_lib "$ROOT/src/lzss.vhd"

@@ -3,6 +3,7 @@ library ieee;
   use ieee.numeric_std.all;
 
 library util;
+  use util.huffman_pkg.all;
   use util.math_pkg.all;
   use util.png_pkg.all;
 
@@ -149,24 +150,10 @@ begin
     -- 3.2.6. Compression with fixed Huffman codes (BTYPE=01)
     proc_fixed_huffman : process (isl_clk) is
 
-      type t_code is record
-        sl_match             : std_logic;
-        literal_bits         : integer range 8 to 9;
-        literal_value        : integer range 48 to 511;
-        length_bits          : integer range 7 to 8;
-        length_value         : integer range 257 to 285;
-        length_extra_bits    : integer range 0 to 5;
-        length_extra_value   : integer range 0 to 2 ** 5;
-        distance_bits        : integer range 5 to 5;
-        distance_value       : integer range 0 to 29;
-        distance_extra_bits  : integer range 0 to 13;
-        distance_extra_value : integer range 0 to 2 ** 13;
-      end record;
+      variable v_code         : t_code;
+      variable v_huffman_code : t_huffman_code;
 
-      variable v_code : t_code;
-
-      variable v_int_literal_value,
-               v_int_match_length,
+      variable v_int_match_length,
                v_int_start_value,
                v_int_match_distance : integer;
       -- only used to suppress a ghdl synthesis error
@@ -207,12 +194,12 @@ begin
               if (islv_data(islv_data'HIGH) = '0') then
                 -- no match = literal/raw data
                 state <= LITERAL_CODE;
-                v_code.sl_match := '0';
+                v_huffman_code.sl_match := '0';
               else
                 -- match, following states:
                 -- LENGTH_CODE -> EXTRA_LENGTH_BITS -> DISTANCE_CODE -> EXTRA_DISTANCE_BITS
                 state <= LENGTH_CODE;
-                v_code.sl_match := '1';
+                v_huffman_code.sl_match := '1';
               end if;
               slv_current_value <= islv_data;
             end if;
@@ -222,204 +209,67 @@ begin
             end if;
 
           when LITERAL_CODE =>
-            v_int_literal_value := to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto islv_data'HIGH - 8)));
-            if (v_int_literal_value <= 143) then
-              v_code.literal_bits  := 8;
-              v_code.literal_value := 48 + v_int_literal_value;
-            else
-              v_code.literal_bits  := 9;
-              v_code.literal_value := 256 + v_int_literal_value;
-            end if;
+            v_code                       := get_literal_code(to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto islv_data'HIGH - 8))));
+            v_huffman_code.literal_bits  := v_code.bits;
+            v_huffman_code.literal_value := v_code.value;
 
-            report "LITERAL " & to_string(buffer64.int_current_index) & " " & to_string(v_code.literal_value);
+            report "LITERAL " & to_string(buffer64.int_current_index) & " " & to_string(v_huffman_code.literal_value);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_code.literal_value, 13));
-            barrel_shifter.int_bits      <= v_code.literal_bits;
+            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.literal_value, 13));
+            barrel_shifter.int_bits      <= v_huffman_code.literal_bits;
             barrel_shifter.sl_descending <= '1';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_code.literal_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.literal_bits;
 
             state <= SEND_BYTES;
 
           when LENGTH_CODE =>
-            v_int_match_length := to_integer(unsigned(slv_current_value(C_MATCH_LENGTH_BITS - 1 downto 0)));
+            v_int_match_length          := to_integer(unsigned(slv_current_value(C_MATCH_LENGTH_BITS - 1 downto 0)));
+            v_code                      := get_length_code(v_int_match_length);
+            v_huffman_code.length_bits  := v_code.bits;
+            v_huffman_code.length_value := v_code.value;
 
-            if (v_int_match_length <= 10) then
-              v_code.length_value := 254 + v_int_match_length;
-            elsif (v_int_match_length <= 12) then
-              v_code.length_value := 265;
-            elsif (v_int_match_length <= 14) then
-              v_code.length_value := 266;
-            elsif (v_int_match_length <= 16) then
-              v_code.length_value := 267;
-            elsif (v_int_match_length <= 18) then
-              v_code.length_value := 268;
-            elsif (v_int_match_length <= 22) then
-              v_code.length_value := 269;
-            elsif (v_int_match_length <= 26) then
-              v_code.length_value := 270;
-            elsif (v_int_match_length <= 30) then
-              v_code.length_value := 271;
-            elsif (v_int_match_length <= 34) then
-              v_code.length_value := 272;
-            elsif (v_int_match_length <= 42) then
-              v_code.length_value := 273;
-            elsif (v_int_match_length <= 50) then
-              v_code.length_value := 274;
-            elsif (v_int_match_length <= 58) then
-              v_code.length_value := 275;
-            elsif (v_int_match_length <= 66) then
-              v_code.length_value := 276;
-            elsif (v_int_match_length <= 82) then
-              v_code.length_value := 277;
-            elsif (v_int_match_length <= 98) then
-              v_code.length_value := 278;
-            elsif (v_int_match_length <= 114) then
-              v_code.length_value := 279;
-            elsif (v_int_match_length <= 130) then
-              v_code.length_value := 280;
-            elsif (v_int_match_length <= 162) then
-              v_code.length_value := 281;
-            elsif (v_int_match_length <= 194) then
-              v_code.length_value := 282;
-            elsif (v_int_match_length <= 226) then
-              v_code.length_value := 283;
-            elsif (v_int_match_length <= 257) then
-              v_code.length_value := 284;
-            elsif (v_int_match_length = 258) then
-              v_code.length_value := 285;
-            else
-              report "invalid length" & to_string(v_int_match_length) severity error;
-            end if;
-
-            if (v_int_match_length <= 114) then
-              v_code.length_bits := 7;
-            else
-              v_code.length_bits := 8;
-            end if;
-
-            report "LENGTH_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_code.length_value);
+            report "LENGTH_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_huffman_code.length_value);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_code.length_value, 13));
-            barrel_shifter.int_bits      <= v_code.length_bits;
+            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.length_value, 13));
+            barrel_shifter.int_bits      <= v_huffman_code.length_bits;
             barrel_shifter.sl_descending <= '1';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_code.length_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length_bits;
 
-            -- no extra bits for lengths <= 10
-            -- will save one cycle in EXTRA_LENGTH_BITS
-            if (v_int_match_length <= 10 or v_int_match_length = 285) then
-              state <= DISTANCE_CODE;
-            else
-              state <= EXTRA_LENGTH_BITS;
-            end if;
+            state <= EXTRA_LENGTH_BITS;
 
           when EXTRA_LENGTH_BITS =>
-            if (v_int_match_length <= 18) then
-              v_code.length_extra_bits := 1;
-              v_int_start_value        := 11;
-            elsif (v_int_match_length <= 34) then
-              v_code.length_extra_bits := 2;
-              v_int_start_value        := 19;
-            elsif (v_int_match_length <= 66) then
-              v_code.length_extra_bits := 3;
-              v_int_start_value        := 35;
-            elsif (v_int_match_length <= 130) then
-              v_code.length_extra_bits := 4;
-              v_int_start_value        := 67;
-            elsif (v_int_match_length <= 257) then
-              v_code.length_extra_bits := 5;
-              v_int_start_value        := 131;
-            else
-              report "invalid length" & to_string(v_int_match_length) severity error;
-            end if;
-
-            v_code.length_extra_value := v_int_match_length - v_int_start_value;
+            v_code                            := get_length_extra_code(v_int_match_length);
+            v_huffman_code.length_extra_bits  := v_code.bits;
+            v_huffman_code.length_extra_value := v_code.value;
 
             report "EXTRA_LENGTH_BITS " &
               to_string(buffer64.int_current_index) & " " &
               to_string(v_int_match_length) & " " &
-              to_string(v_code.length_extra_value);
+              to_string(v_huffman_code.length_extra_value);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_code.length_extra_value, 13)));
-            barrel_shifter.int_bits      <= v_code.length_extra_bits;
+            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.length_extra_value, 13)));
+            barrel_shifter.int_bits      <= v_huffman_code.length_extra_bits;
             barrel_shifter.sl_descending <= '0';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_code.length_extra_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length_extra_bits;
 
             state <= DISTANCE_CODE;
 
           when DISTANCE_CODE =>
-            -- distance code
-            v_int_match_distance := to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto C_MATCH_LENGTH_BITS)));
+            v_int_match_distance          := to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto C_MATCH_LENGTH_BITS)));
+            v_code                        := get_distance_code(v_int_match_distance);
+            v_huffman_code.distance_bits  := v_code.bits;
+            v_huffman_code.distance_value := v_code.value;
 
-            if (v_int_match_distance <= 4) then
-              v_code.distance_value := v_int_match_distance - 1;
-            elsif (v_int_match_distance <= 6) then
-              v_code.distance_value := 4;
-            elsif (v_int_match_distance <= 8) then
-              v_code.distance_value := 5;
-            elsif (v_int_match_distance <= 12) then
-              v_code.distance_value := 6;
-            elsif (v_int_match_distance <= 16) then
-              v_code.distance_value := 7;
-            elsif (v_int_match_distance <= 24) then
-              v_code.distance_value := 8;
-            elsif (v_int_match_distance <= 32) then
-              v_code.distance_value := 9;
-            elsif (v_int_match_distance <= 48) then
-              v_code.distance_value := 10;
-            elsif (v_int_match_distance <= 64) then
-              v_code.distance_value := 11;
-            elsif (v_int_match_distance <= 96) then
-              v_code.distance_value := 12;
-            elsif (v_int_match_distance <= 128) then
-              v_code.distance_value := 13;
-            elsif (v_int_match_distance <= 192) then
-              v_code.distance_value := 14;
-            elsif (v_int_match_distance <= 256) then
-              v_code.distance_value := 15;
-            elsif (v_int_match_distance <= 384) then
-              v_code.distance_value := 16;
-            elsif (v_int_match_distance <= 512) then
-              v_code.distance_value := 17;
-            elsif (v_int_match_distance <= 768) then
-              v_code.distance_value := 18;
-            elsif (v_int_match_distance <= 1024) then
-              v_code.distance_value := 19;
-            elsif (v_int_match_distance <= 1536) then
-              v_code.distance_value := 20;
-            elsif (v_int_match_distance <= 2048) then
-              v_code.distance_value := 21;
-            elsif (v_int_match_distance <= 3072) then
-              v_code.distance_value := 22;
-            elsif (v_int_match_distance <= 4096) then
-              v_code.distance_value := 23;
-            elsif (v_int_match_distance <= 6144) then
-              v_code.distance_value := 24;
-            elsif (v_int_match_distance <= 8192) then
-              v_code.distance_value := 25;
-            elsif (v_int_match_distance <= 12288) then
-              v_code.distance_value := 26;
-            elsif (v_int_match_distance <= 16384) then
-              v_code.distance_value := 27;
-            elsif (v_int_match_distance <= 24576) then
-              v_code.distance_value := 28;
-            elsif (v_int_match_distance <= 32768) then
-              v_code.distance_value := 29;
-            else
-              report "invalid distance" & to_string(v_int_match_distance) severity error;
-            end if;
-
-            v_code.distance_bits := 5;
-
-            report "DISTANCE_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_code.distance_value);
+            report "DISTANCE_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_huffman_code.distance_value);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_code.distance_value, 13));
-            barrel_shifter.int_bits      <= v_code.distance_bits;
+            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.distance_value, 13));
+            barrel_shifter.int_bits      <= v_huffman_code.distance_bits;
             barrel_shifter.sl_descending <= '1';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_code.distance_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance_bits;
 
             -- no extra bits for distance <= 4
             -- will save one cycle in EXTRA_DISTANCE_BITS
@@ -430,63 +280,21 @@ begin
             end if;
 
           when EXTRA_DISTANCE_BITS =>
-            -- TODO: Isn't more separation needed?
-            if (v_int_match_distance <= 8) then
-              v_code.distance_extra_bits := 1;
-              v_int_start_value          := 5;
-            elsif (v_int_match_distance <= 16) then
-              v_code.distance_extra_bits := 2;
-              v_int_start_value          := 9;
-            elsif (v_int_match_distance <= 32) then
-              v_code.distance_extra_bits := 3;
-              v_int_start_value          := 17;
-            elsif (v_int_match_distance <= 64) then
-              v_code.distance_extra_bits := 4;
-              v_int_start_value          := 33;
-            elsif (v_int_match_distance <= 128) then
-              v_code.distance_extra_bits := 5;
-              v_int_start_value          := 65;
-            elsif (v_int_match_distance <= 256) then
-              v_code.distance_extra_bits := 6;
-              v_int_start_value          := 129;
-            elsif (v_int_match_distance <= 512) then
-              v_code.distance_extra_bits := 7;
-              v_int_start_value          := 257;
-            elsif (v_int_match_distance <= 1024) then
-              v_code.distance_extra_bits := 8;
-              v_int_start_value          := 513;
-            elsif (v_int_match_distance <= 2048) then
-              v_code.distance_extra_bits := 9;
-              v_int_start_value          := 1025;
-            elsif (v_int_match_distance <= 4096) then
-              v_code.distance_extra_bits := 10;
-              v_int_start_value          := 2049;
-            elsif (v_int_match_distance <= 8192) then
-              v_code.distance_extra_bits := 11;
-              v_int_start_value          := 4097;
-            elsif (v_int_match_distance <= 16384) then
-              v_code.distance_extra_bits := 12;
-              v_int_start_value          := 8193;
-            elsif (v_int_match_distance <= 32768) then
-              v_code.distance_extra_bits := 13;
-              v_int_start_value          := 16384;
-            else
-              report "invalid distance" & to_string(v_int_match_distance) severity error;
-            end if;
-
-            v_code.distance_extra_value := v_int_match_distance - v_int_start_value;
+            v_code                              := get_distance_extra_code(v_int_match_distance);
+            v_huffman_code.distance_extra_bits  := v_code.bits;
+            v_huffman_code.distance_extra_value := v_code.value;
 
             report "EXTRA_DISTANCE_BITS " &
               to_string(buffer64.int_current_index) & " " &
-              to_string(v_code.distance_extra_bits) & " " &
+              to_string(v_huffman_code.distance_extra_bits) & " " &
               to_string(v_int_match_length) & " " &
               to_string(v_int_start_value);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_code.distance_extra_value, 13)));
-            barrel_shifter.int_bits      <= v_code.distance_extra_bits;
+            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.distance_extra_value, 13)));
+            barrel_shifter.int_bits      <= v_huffman_code.distance_extra_bits;
             barrel_shifter.sl_descending <= '0';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_code.distance_extra_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance_extra_bits;
 
             state <= SEND_BYTES;
 

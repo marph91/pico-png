@@ -150,11 +150,9 @@ begin
     -- 3.2.6. Compression with fixed Huffman codes (BTYPE=01)
     proc_fixed_huffman : process (isl_clk) is
 
-      variable v_code         : t_code;
       variable v_huffman_code : t_huffman_code;
 
       variable v_int_match_length,
-               v_int_start_value,
                v_int_match_distance : integer;
       -- only used to suppress a ghdl synthesis error
       -- TODO: extract a MWE and report the bug
@@ -209,96 +207,81 @@ begin
             end if;
 
           when LITERAL_CODE =>
-            v_code                       := get_literal_code(to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto islv_data'HIGH - 8))));
-            v_huffman_code.literal_bits  := v_code.bits;
-            v_huffman_code.literal_value := v_code.value;
+            v_huffman_code.lit := get_literal_code(to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto islv_data'HIGH - 8))));
 
-            report "LITERAL " & to_string(buffer64.int_current_index) & " " & to_string(v_huffman_code.literal_value);
+            report "LITERAL " & to_string(buffer64.int_current_index) & " " & to_string(v_huffman_code.lit.value);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.literal_value, 13));
-            barrel_shifter.int_bits      <= v_huffman_code.literal_bits;
+            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.lit.value, 13));
+            barrel_shifter.int_bits      <= v_huffman_code.lit.bits;
             barrel_shifter.sl_descending <= '1';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.literal_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.lit.bits;
 
             state <= SEND_BYTES;
 
           when LENGTH_CODE =>
-            v_int_match_length          := to_integer(unsigned(slv_current_value(C_MATCH_LENGTH_BITS - 1 downto 0)));
-            v_code                      := get_length_code(v_int_match_length);
-            v_huffman_code.length_bits  := v_code.bits;
-            v_huffman_code.length_value := v_code.value;
+            v_int_match_length    := to_integer(unsigned(slv_current_value(C_MATCH_LENGTH_BITS - 1 downto 0)));
+            v_huffman_code.length := get_length_code(v_int_match_length);
 
-            report "LENGTH_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_huffman_code.length_value);
+            report "LENGTH_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_huffman_code.length.value);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.length_value, 13));
-            barrel_shifter.int_bits      <= v_huffman_code.length_bits;
+            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.length.value, 13));
+            barrel_shifter.int_bits      <= v_huffman_code.length.bits;
             barrel_shifter.sl_descending <= '1';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length.bits;
 
             state <= EXTRA_LENGTH_BITS;
 
           when EXTRA_LENGTH_BITS =>
-            v_code                            := get_length_extra_code(v_int_match_length);
-            v_huffman_code.length_extra_bits  := v_code.bits;
-            v_huffman_code.length_extra_value := v_code.value;
+            v_huffman_code.length_extra := get_length_extra_code(v_int_match_length);
 
             report "EXTRA_LENGTH_BITS " &
               to_string(buffer64.int_current_index) & " " &
               to_string(v_int_match_length) & " " &
-              to_string(v_huffman_code.length_extra_value);
+              to_string(v_huffman_code.length_extra.value);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.length_extra_value, 13)));
-            barrel_shifter.int_bits      <= v_huffman_code.length_extra_bits;
+            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.length_extra.value, 13)));
+            barrel_shifter.int_bits      <= v_huffman_code.length_extra.bits;
             barrel_shifter.sl_descending <= '0';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length_extra_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length_extra.bits;
 
             state <= DISTANCE_CODE;
 
           when DISTANCE_CODE =>
-            v_int_match_distance          := to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto C_MATCH_LENGTH_BITS)));
-            v_code                        := get_distance_code(v_int_match_distance);
-            v_huffman_code.distance_bits  := v_code.bits;
-            v_huffman_code.distance_value := v_code.value;
+            v_int_match_distance    := to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto C_MATCH_LENGTH_BITS)));
+            v_huffman_code.distance := get_distance_code(v_int_match_distance);
 
-            report "DISTANCE_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_huffman_code.distance_value);
+            report "DISTANCE_CODE " & to_string(buffer64.int_current_index) & " " & to_string(v_huffman_code.distance.value);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.distance_value, 13));
-            barrel_shifter.int_bits      <= v_huffman_code.distance_bits;
+            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.distance.value, 13));
+            barrel_shifter.int_bits      <= v_huffman_code.distance.bits;
             barrel_shifter.sl_descending <= '1';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance.bits;
 
-            -- no extra bits for distance <= 4
-            -- will save one cycle in EXTRA_DISTANCE_BITS
-            if (v_int_match_distance <= 4) then
-              state <= SEND_BYTES;
-            else
-              state <= EXTRA_DISTANCE_BITS;
-            end if;
+            state <= EXTRA_DISTANCE_BITS;
 
           when EXTRA_DISTANCE_BITS =>
-            v_code                              := get_distance_extra_code(v_int_match_distance);
-            v_huffman_code.distance_extra_bits  := v_code.bits;
-            v_huffman_code.distance_extra_value := v_code.value;
+            v_huffman_code.distance_extra := get_distance_extra_code(v_int_match_distance);
 
             report "EXTRA_DISTANCE_BITS " &
               to_string(buffer64.int_current_index) & " " &
-              to_string(v_huffman_code.distance_extra_bits) & " " &
-              to_string(v_int_match_length) & " " &
-              to_string(v_int_start_value);
+              to_string(v_huffman_code.distance_extra.bits) & " " &
+              to_string(v_int_match_length);
 
             barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.distance_extra_value, 13)));
-            barrel_shifter.int_bits      <= v_huffman_code.distance_extra_bits;
+            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.distance_extra.value, 13)));
+            barrel_shifter.int_bits      <= v_huffman_code.distance_extra.bits;
             barrel_shifter.sl_descending <= '0';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance_extra_bits;
+            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance_extra.bits;
 
             state <= SEND_BYTES;
 
           when SEND_BYTES =>
+            assert_huffman_code_valid(v_huffman_code);
+
             if (sl_flush_increment_index = '1') then
               -- append end of block -> eob is 7 bit zeros (256) -> zeros get appended anyway
               barrel_shifter.sl_valid_in   <= '1';

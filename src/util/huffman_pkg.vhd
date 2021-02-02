@@ -10,32 +10,15 @@ package huffman_pkg is
   end record;
 
   type t_huffman_code is record
-    sl_match             : std_logic;
-    literal_bits         : integer;
-    literal_value        : integer;
-    length_bits          : integer;
-    length_value         : integer;
-    length_extra_bits    : integer;
-    length_extra_value   : integer;
-    distance_bits        : integer;
-    distance_value       : integer;
-    distance_extra_bits  : integer;
-    distance_extra_value : integer;
+    sl_match       : std_logic;
+    lit            : t_code;
+    length         : t_code;
+    length_extra   : t_code;
+    distance       : t_code;
+    distance_extra : t_code;
   end record;
 
-  -- type t_huffman_code is record
-  --   sl_match             : std_logic;
-  --   literal_bits         : integer range 8 to 9;
-  --   literal_value        : integer range 48 to 511;
-  --   length_bits          : integer range 7 to 8;
-  --   length_value         : integer range 257 to 285;
-  --   length_extra_bits    : integer range 0 to 5;
-  --   length_extra_value   : integer range 0 to 2 ** 5;
-  --   distance_bits        : integer range 5 to 5;
-  --   value       : integer range 0 to 29;
-  --   distance_extra_bits  : integer range 0 to 13;
-  --   distance_extra_value : integer range 0 to 2 ** 13;
-  -- end record;
+  procedure assert_huffman_code_valid (huffman_code : t_huffman_code);
 
   function get_literal_code (raw_value : integer) return t_code;
 
@@ -50,6 +33,28 @@ package huffman_pkg is
 end package huffman_pkg;
 
 package body huffman_pkg is
+
+  procedure assert_huffman_code_valid (huffman_code : t_huffman_code) is
+  begin
+
+    -- TODO: extend
+
+    if (huffman_code.sl_match = '0') then
+      --   literal_bits         : integer range 8 to 9;
+      --   literal_value        : integer range 48 to 511;
+      assert (8 <= huffman_code.lit.bits and huffman_code.lit.bits <= 9) report "invalid literal bits";
+    else
+      --   length_bits          : integer range 7 to 8;
+      --   length_value         : integer range 257 to 285;
+      --   length_extra_bits    : integer range 0 to 5;
+      --   length_extra_value   : integer range 0 to 2 ** 5;
+      --   distance_bits        : integer range 5 to 5;
+      --   distance_value       : integer range 0 to 29;
+      --   distance_extra_bits  : integer range 0 to 13;
+      --   distance_extra_value : integer range 0 to 2 ** 13;
+    end if;
+
+  end;
 
   function get_literal_code (raw_value : integer) return t_code is
     variable v_code : t_code;
@@ -136,20 +141,20 @@ package body huffman_pkg is
     end if;
 
     if (raw_value <= 18) then
-      v_code.bits := 1;
-      v_int_start_value        := 11;
+      v_code.bits       := 1;
+      v_int_start_value := 11;
     elsif (raw_value <= 34) then
-      v_code.bits := 2;
-      v_int_start_value        := 19;
+      v_code.bits       := 2;
+      v_int_start_value := 19;
     elsif (raw_value <= 66) then
-      v_code.bits := 3;
-      v_int_start_value        := 35;
+      v_code.bits       := 3;
+      v_int_start_value := 35;
     elsif (raw_value <= 130) then
-      v_code.bits := 4;
-      v_int_start_value        := 67;
+      v_code.bits       := 4;
+      v_int_start_value := 67;
     elsif (raw_value <= 257) then
-      v_code.bits := 5;
-      v_int_start_value        := 131;
+      v_code.bits       := 5;
+      v_int_start_value := 131;
     else
       report "invalid length" & to_string(raw_value) severity error;
     end if;
@@ -228,46 +233,52 @@ package body huffman_pkg is
     variable v_code            : t_code;
     variable v_int_start_value : integer;
   begin
+
+    if (raw_value <= 4) then
+      v_code.bits := 0;
+      return v_code;
+    end if;
+
     -- TODO: Isn't more separation needed?
     if (raw_value <= 8) then
-      v_code.bits := 1;
-      v_int_start_value          := 5;
+      v_code.bits       := 1;
+      v_int_start_value := 5;
     elsif (raw_value <= 16) then
-      v_code.bits := 2;
-      v_int_start_value          := 9;
+      v_code.bits       := 2;
+      v_int_start_value := 9;
     elsif (raw_value <= 32) then
-      v_code.bits := 3;
-      v_int_start_value          := 17;
+      v_code.bits       := 3;
+      v_int_start_value := 17;
     elsif (raw_value <= 64) then
-      v_code.bits := 4;
-      v_int_start_value          := 33;
+      v_code.bits       := 4;
+      v_int_start_value := 33;
     elsif (raw_value <= 128) then
-      v_code.bits := 5;
-      v_int_start_value          := 65;
+      v_code.bits       := 5;
+      v_int_start_value := 65;
     elsif (raw_value <= 256) then
-      v_code.bits := 6;
-      v_int_start_value          := 129;
+      v_code.bits       := 6;
+      v_int_start_value := 129;
     elsif (raw_value <= 512) then
-      v_code.bits := 7;
-      v_int_start_value          := 257;
+      v_code.bits       := 7;
+      v_int_start_value := 257;
     elsif (raw_value <= 1024) then
-      v_code.bits := 8;
-      v_int_start_value          := 513;
+      v_code.bits       := 8;
+      v_int_start_value := 513;
     elsif (raw_value <= 2048) then
-      v_code.bits := 9;
-      v_int_start_value          := 1025;
+      v_code.bits       := 9;
+      v_int_start_value := 1025;
     elsif (raw_value <= 4096) then
-      v_code.bits := 10;
-      v_int_start_value          := 2049;
+      v_code.bits       := 10;
+      v_int_start_value := 2049;
     elsif (raw_value <= 8192) then
-      v_code.bits := 11;
-      v_int_start_value          := 4097;
+      v_code.bits       := 11;
+      v_int_start_value := 4097;
     elsif (raw_value <= 16384) then
-      v_code.bits := 12;
-      v_int_start_value          := 8193;
+      v_code.bits       := 12;
+      v_int_start_value := 8193;
     elsif (raw_value <= 32768) then
-      v_code.bits := 13;
-      v_int_start_value          := 16384;
+      v_code.bits       := 13;
+      v_int_start_value := 16384;
     else
       report "invalid distance" & to_string(raw_value) severity error;
     end if;

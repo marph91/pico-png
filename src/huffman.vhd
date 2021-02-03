@@ -241,11 +241,13 @@ begin
               to_string(v_int_match_length) & " " &
               to_string(v_huffman_code.length_extra.value);
 
-            barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.length_extra.value, 13)));
-            barrel_shifter.int_bits      <= v_huffman_code.length_extra.bits;
-            barrel_shifter.sl_descending <= '0';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length_extra.bits;
+            if (v_huffman_code.length_extra.bits /= 0) then
+              barrel_shifter.sl_valid_in   <= '1';
+              barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.length_extra.value, 13)));
+              barrel_shifter.int_bits      <= v_huffman_code.length_extra.bits;
+              barrel_shifter.sl_descending <= '0';
+              buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length_extra.bits;
+            end if;
 
             state <= DISTANCE_CODE;
 
@@ -271,11 +273,13 @@ begin
               to_string(v_huffman_code.distance_extra.bits) & " " &
               to_string(v_int_match_length);
 
-            barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.distance_extra.value, 13)));
-            barrel_shifter.int_bits      <= v_huffman_code.distance_extra.bits;
-            barrel_shifter.sl_descending <= '0';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance_extra.bits;
+            if (v_huffman_code.distance_extra.bits /= 0) then
+              barrel_shifter.sl_valid_in   <= '1';
+              barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.distance_extra.value, 13)));
+              barrel_shifter.int_bits      <= v_huffman_code.distance_extra.bits;
+              barrel_shifter.sl_descending <= '0';
+              buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance_extra.bits;
+            end if;
 
             state <= SEND_BYTES;
 

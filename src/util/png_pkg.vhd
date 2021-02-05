@@ -7,6 +7,8 @@ library util;
 
 package png_pkg is
 
+  function get_byte (vector: std_logic_vector; int_byte_index : natural) return std_logic_vector;
+
   function get_img_depth (color_type : integer) return integer;
 
   function xor_vector (a, b : std_logic_vector) return std_logic_vector;
@@ -39,6 +41,12 @@ package png_pkg is
 end package png_pkg;
 
 package body png_pkg is
+
+  function get_byte (vector: std_logic_vector; int_byte_index : natural) return std_logic_vector is
+  begin
+    return vector(int_byte_index * 8 - 1 downto (int_byte_index - 1) * 8);
+  end function;
+
   -- get the image depth, based on the color type
 
   function get_img_depth (color_type : integer) return integer is

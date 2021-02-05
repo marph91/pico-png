@@ -136,7 +136,7 @@ package body huffman_pkg is
   begin
 
     if (raw_value <= 10 or raw_value = 285) then
-      v_code.bits := 0;
+      v_code := (0, 0);
       return v_code;
     end if;
 
@@ -235,7 +235,7 @@ package body huffman_pkg is
   begin
 
     if (raw_value <= 4) then
-      v_code.bits := 0;
+      v_code := (0, 0);
       return v_code;
     end if;
 

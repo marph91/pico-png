@@ -41,13 +41,13 @@ architecture behavioral of huffman is
   signal slv_block_data          : std_logic_vector(71 downto 0) := (others => '0');
   signal int_block_bytes_to_send : integer range 0 to 16 := 0; -- TODO: range can be bigger
 
-  signal sl_finish                          : std_logic := '0';
-  signal sl_bfinal                          : std_logic := '0';
-  signal sl_flush, sl_flush_increment_index : std_logic := '0';
+  signal sl_finish : std_logic := '0';
+  signal sl_bfinal : std_logic := '0';
+  signal sl_flush  : std_logic := '0';
 
   signal slv_current_value : std_logic_vector(C_INPUT_BITWIDTH - 1 downto 0) := (others => '0');
 
-  type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, SEND_BYTES);
+  type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, FLUSH, SEND_BYTES);
 
   signal state : t_states := IDLE;
 
@@ -162,9 +162,7 @@ begin
 
       if (rising_edge(isl_clk)) then
         if (isl_flush = '1') then
-          sl_bfinal                <= '1';
-          sl_flush                 <= '1';
-          sl_flush_increment_index <= '1';
+          sl_flush <= '1';
         end if;
 
         barrel_shifter.sl_valid_in <= '0';
@@ -203,7 +201,7 @@ begin
             end if;
 
             if (sl_flush = '1') then
-              state <= SEND_BYTES;
+              state <= FLUSH;
             end if;
 
           when LITERAL_CODE =>
@@ -283,20 +281,34 @@ begin
 
             state <= SEND_BYTES;
 
-          when SEND_BYTES =>
-            assert_huffman_code_valid(v_huffman_code);
+          when FLUSH =>
+            if (sl_flush = '1') then
+              sl_flush  <= '0';
+              sl_bfinal <= '1';
 
-            if (sl_flush_increment_index = '1') then
               -- append end of block -> eob is 7 bit zeros (256) -> zeros get appended anyway
               barrel_shifter.sl_valid_in   <= '1';
               barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(0, 13));
               barrel_shifter.int_bits      <= 7;
               barrel_shifter.sl_descending <= '1';
               buffer64.int_current_index   <= buffer64.int_current_index + 7;
+            else
+              -- pad zeros (for full byte) at the end
+              if (buffer64.int_current_index mod 8 /= 0) then
+                barrel_shifter.sl_valid_in   <= '1';
+                barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(0, 13));
+                barrel_shifter.int_bits      <= 8 - buffer64.int_current_index mod 8;
+                barrel_shifter.sl_descending <= '1';
+                buffer64.int_current_index   <= buffer64.int_current_index + 8 - buffer64.int_current_index mod 8;
+              end if;
 
-              sl_flush_increment_index <= '0';
-              sl_valid_out             <= '0';
-            elsif (buffer64.int_current_index >= 8) then
+              state <= SEND_BYTES;
+            end if;
+
+          when SEND_BYTES =>
+            assert_huffman_code_valid(v_huffman_code);
+
+            if (buffer64.int_current_index >= 8) then
               if (buffer64.int_current_index_d1 >= buffer64.int_current_index) then
                 -- wait until the counts are synced
                 sl_valid_out               <= '1';
@@ -306,19 +318,9 @@ begin
               else
                 sl_valid_out <= '0';
               end if;
-            elsif (buffer64.int_current_index /= 0 and sl_flush = '1') then
-              sl_valid_out <= '0';
-              sl_flush     <= '0';
-              -- pad zeros (for full byte) at the end
-              barrel_shifter.sl_valid_in   <= '1';
-              barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(0, 13));
-              barrel_shifter.int_bits      <= 8 - buffer64.int_current_index;
-              barrel_shifter.sl_descending <= '1';
-              buffer64.int_current_index   <= buffer64.int_current_index + 8 - buffer64.int_current_index;
             else
               if (sl_bfinal = '1') then
                 sl_bfinal <= '0';
-                sl_flush  <= '0';
                 sl_finish <= '1';
                 state     <= IDLE;
               else

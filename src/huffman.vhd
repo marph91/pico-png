@@ -48,7 +48,7 @@ architecture behavioral of huffman is
 
   signal slv_current_value : std_logic_vector(C_INPUT_BITWIDTH - 1 downto 0) := (others => '0');
 
-  type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, EOB, PAD, SEND_BYTES, SEND_BYTES_FINAL);
+  type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, EOB, PAD, SEND_BYTES_FINAL);
 
   signal state : t_states := IDLE;
 
@@ -80,6 +80,7 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
+      -- Preserve the flush impulse, since it might be not processed directly.
       if (isl_flush = '1') then
         sl_flush <= '1';
       end if;
@@ -131,7 +132,7 @@ begin
           barrel_shifter.int_bits      <= v_huffman_code.lit.bits;
           barrel_shifter.sl_descending <= '1';
 
-          state <= SEND_BYTES;
+          state <= WAIT_FOR_INPUT;
 
         when LENGTH_CODE =>
           v_int_match_length    := to_integer(unsigned(slv_current_value(C_MATCH_LENGTH_BITS - 1 downto 0)));
@@ -191,7 +192,7 @@ begin
             barrel_shifter.sl_descending <= '0';
           end if;
 
-          state <= SEND_BYTES;
+          state <= WAIT_FOR_INPUT;
 
         when EOB =>
           -- append end of block -> eob is 7 bit zeros (256) -> zeros get appended anyway
@@ -217,11 +218,6 @@ begin
 
           state <= SEND_BYTES_FINAL;
 
-        when SEND_BYTES =>
-          assert_huffman_code_valid(v_huffman_code);
-
-          state <= WAIT_FOR_INPUT;
-
         when SEND_BYTES_FINAL =>
           if (sl_aggregation_finished = '1') then
             sl_finish <= '1';
@@ -243,7 +239,6 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
-      assert buffer32.int_current_index < 17 report to_string(buffer32.int_current_index);
       sl_valid_out            <= '0';
       sl_aggregation_finished <= '0';
 

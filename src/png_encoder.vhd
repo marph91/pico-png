@@ -34,7 +34,7 @@ entity png_encoder is
     C_SEARCH_BUFFER_SIZE    : integer range 1 to 32768 := 12;
     C_MAX_MATCH_LENGTH_USER : integer                  := 7;
 
-    -- 0: no compression
+    -- 0: no compression (not supported)
     -- 1: huffman encoding with a fixed table
     -- 2: huffman encoding with a dynamic table (not supported yet)
     -- 3: not allowed

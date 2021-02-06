@@ -143,7 +143,7 @@ def create_test_suite(tb_lib):
     testcases = []
     for name, img_size, color_type, block_type, row_filter in itertools.product(
             ("increment", "ones", "random"), ((4, 4), (12, 12), (60, 80)),
-            (0, 2, 4, 6), (0, 1), (0, 1)):
+            (0, 2, 4, 6), (1,), (0, 1)):
         if row_filter != 0 and img_size != (12, 12):
             continue  # skip some tests to reduce execution time
 

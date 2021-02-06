@@ -46,12 +46,16 @@ package body huffman_pkg is
     else
       --   length_bits          : integer range 7 to 8;
       --   length_value         : integer range 257 to 285;
+      assert (7 <= huffman_code.length.bits and huffman_code.length.bits <= 8) report "invalid length bits";
       --   length_extra_bits    : integer range 0 to 5;
       --   length_extra_value   : integer range 0 to 2 ** 5;
+      assert (0 <= huffman_code.length_extra.bits and huffman_code.length_extra.bits <= 5) report "invalid length extra bits";
       --   distance_bits        : integer range 5 to 5;
       --   distance_value       : integer range 0 to 29;
+      assert (huffman_code.distance.bits = 5) report "invalid distance bits";
       --   distance_extra_bits  : integer range 0 to 13;
       --   distance_extra_value : integer range 0 to 2 ** 13;
+      assert (0 <= huffman_code.distance_extra.bits and huffman_code.distance_extra.bits <= 13) report "invalid distance extra bits";
     end if;
 
   end;

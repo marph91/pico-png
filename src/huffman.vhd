@@ -28,12 +28,11 @@ end entity huffman;
 architecture behavioral of huffman is
 
   type t_buffer64 is record
-    int_current_index    : integer range 0 to 63;
-    int_current_index_d1 : integer range 0 to 63;
-    slv_data             : std_logic_vector(63 downto 0);
+    int_current_index : integer range 0 to 63;
+    slv_data          : std_logic_vector(63 downto 0);
   end record;
 
-  signal buffer64 : t_buffer64 := (0, 0, (others => '0'));
+  signal buffer64 : t_buffer64 := (0, (others => '0'));
 
   signal sl_valid_out : std_logic := '0';
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
@@ -41,13 +40,14 @@ architecture behavioral of huffman is
   signal slv_block_data          : std_logic_vector(71 downto 0) := (others => '0');
   signal int_block_bytes_to_send : integer range 0 to 16 := 0; -- TODO: range can be bigger
 
-  signal sl_finish : std_logic := '0';
-  signal sl_bfinal : std_logic := '0';
-  signal sl_flush  : std_logic := '0';
+  signal sl_finish               : std_logic := '0';
+  signal sl_bfinal               : std_logic := '0';
+  signal sl_flush                : std_logic := '0';
+  signal sl_aggregation_finished : std_logic := '0';
 
   signal slv_current_value : std_logic_vector(C_INPUT_BITWIDTH - 1 downto 0) := (others => '0');
 
-  type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, FLUSH, SEND_BYTES);
+  type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, EOB, SEND_BYTES, SEND_BYTES_FINAL);
 
   signal state : t_states := IDLE;
 
@@ -154,9 +154,6 @@ begin
 
       variable v_int_match_length,
                v_int_match_distance : integer;
-      -- only used to suppress a ghdl synthesis error
-      -- TODO: extract a MWE and report the bug
-      variable v_slv_data_out : std_logic_vector(7 downto 0);
 
     begin
 
@@ -166,8 +163,6 @@ begin
         end if;
 
         barrel_shifter.sl_valid_in <= '0';
-        -- delay for barrel shifter
-        buffer64.int_current_index_d1 <= buffer64.int_current_index;
 
         case state is
 
@@ -181,7 +176,6 @@ begin
             barrel_shifter.int_bits    <= 3;
             -- 0 if revert_vector() is used
             barrel_shifter.sl_descending <= '0';
-            buffer64.int_current_index   <= buffer64.int_current_index + 3;
 
             state <= WAIT_FOR_INPUT;
 
@@ -201,7 +195,8 @@ begin
             end if;
 
             if (sl_flush = '1') then
-              state <= FLUSH;
+              sl_flush <= '0';
+              state    <= EOB;
             end if;
 
           when LITERAL_CODE =>
@@ -213,7 +208,6 @@ begin
             barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.lit.value, 13));
             barrel_shifter.int_bits      <= v_huffman_code.lit.bits;
             barrel_shifter.sl_descending <= '1';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.lit.bits;
 
             state <= SEND_BYTES;
 
@@ -227,7 +221,6 @@ begin
             barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.length.value, 13));
             barrel_shifter.int_bits      <= v_huffman_code.length.bits;
             barrel_shifter.sl_descending <= '1';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length.bits;
 
             state <= EXTRA_LENGTH_BITS;
 
@@ -244,7 +237,6 @@ begin
               barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.length_extra.value, 13)));
               barrel_shifter.int_bits      <= v_huffman_code.length_extra.bits;
               barrel_shifter.sl_descending <= '0';
-              buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.length_extra.bits;
             end if;
 
             state <= DISTANCE_CODE;
@@ -259,7 +251,6 @@ begin
             barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.distance.value, 13));
             barrel_shifter.int_bits      <= v_huffman_code.distance.bits;
             barrel_shifter.sl_descending <= '1';
-            buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance.bits;
 
             state <= EXTRA_DISTANCE_BITS;
 
@@ -276,57 +267,28 @@ begin
               barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.distance_extra.value, 13)));
               barrel_shifter.int_bits      <= v_huffman_code.distance_extra.bits;
               barrel_shifter.sl_descending <= '0';
-              buffer64.int_current_index   <= buffer64.int_current_index + v_huffman_code.distance_extra.bits;
             end if;
 
             state <= SEND_BYTES;
 
-          when FLUSH =>
-            if (sl_flush = '1') then
-              sl_flush  <= '0';
-              sl_bfinal <= '1';
+          when EOB =>
+            -- append end of block -> eob is 7 bit zeros (256) -> zeros get appended anyway
+            barrel_shifter.sl_valid_in   <= '1';
+            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(0, 13));
+            barrel_shifter.int_bits      <= 7;
+            barrel_shifter.sl_descending <= '1';
 
-              -- append end of block -> eob is 7 bit zeros (256) -> zeros get appended anyway
-              barrel_shifter.sl_valid_in   <= '1';
-              barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(0, 13));
-              barrel_shifter.int_bits      <= 7;
-              barrel_shifter.sl_descending <= '1';
-              buffer64.int_current_index   <= buffer64.int_current_index + 7;
-            else
-              -- pad zeros (for full byte) at the end
-              if (buffer64.int_current_index mod 8 /= 0) then
-                barrel_shifter.sl_valid_in   <= '1';
-                barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(0, 13));
-                barrel_shifter.int_bits      <= 8 - buffer64.int_current_index mod 8;
-                barrel_shifter.sl_descending <= '1';
-                buffer64.int_current_index   <= buffer64.int_current_index + 8 - buffer64.int_current_index mod 8;
-              end if;
-
-              state <= SEND_BYTES;
-            end if;
+            state <= SEND_BYTES_FINAL;
 
           when SEND_BYTES =>
             assert_huffman_code_valid(v_huffman_code);
 
-            if (buffer64.int_current_index >= 8) then
-              if (buffer64.int_current_index_d1 >= buffer64.int_current_index) then
-                -- wait until the counts are synced
-                sl_valid_out               <= '1';
-                buffer64.int_current_index <= buffer64.int_current_index - 8;
-                v_slv_data_out := buffer64.slv_data(buffer64.int_current_index - 1 downto buffer64.int_current_index - 8);
-                slv_data_out               <= revert_vector(v_slv_data_out);
-              else
-                sl_valid_out <= '0';
-              end if;
-            else
-              if (sl_bfinal = '1') then
-                sl_bfinal <= '0';
-                sl_finish <= '1';
-                state     <= IDLE;
-              else
-                state <= WAIT_FOR_INPUT;
-              end if;
-              sl_valid_out <= '0';
+            state <= WAIT_FOR_INPUT;
+
+          when SEND_BYTES_FINAL =>
+            if (sl_aggregation_finished = '1') then
+              sl_finish <= '1';
+              state     <= IDLE;
             end if;
 
         end case;
@@ -336,10 +298,24 @@ begin
     end process proc_fixed_huffman;
 
     proc_barrel_shifter : process (isl_clk) is
+
+      -- only used to suppress a ghdl synthesis error
+      -- TODO: extract a MWE and report the bug
+      variable v_slv_data_out : std_logic_vector(7 downto 0);
+
     begin
 
       if (rising_edge(isl_clk)) then
+        sl_valid_out            <= '0';
+        sl_aggregation_finished <= '0';
+
+        if (state = EOB) then
+          sl_bfinal <= '1';
+        end if;
+
         if (barrel_shifter.sl_valid_in = '1') then
+          buffer64.int_current_index <= buffer64.int_current_index + barrel_shifter.int_bits;
+
           -- shift the whole buffer
           for pos in buffer64.slv_data'RANGE loop
             buffer64.slv_data(pos) <= buffer64.slv_data((pos - barrel_shifter.int_bits) mod buffer64.slv_data'LENGTH);
@@ -357,6 +333,22 @@ begin
               buffer64.slv_data(pos) <= barrel_shifter.slv_data_in(barrel_shifter.slv_data_in'HIGH - barrel_shifter.int_bits + pos + 1);
             end if;
           end loop;
+        elsif (buffer64.int_current_index >= 8) then
+          buffer64.int_current_index <= buffer64.int_current_index - 8;
+          sl_valid_out               <= '1';
+          v_slv_data_out := buffer64.slv_data(buffer64.int_current_index - 1 downto buffer64.int_current_index - 8);
+          slv_data_out               <= revert_vector(v_slv_data_out);
+        elsif (sl_bfinal = '1') then
+          sl_bfinal               <= '0';
+          sl_aggregation_finished <= '1';
+          if (buffer64.int_current_index /= 0) then
+            -- pad zeros (for full byte) at the end
+            buffer64.int_current_index <= 0;
+            sl_valid_out               <= '1';
+            v_slv_data_out := buffer64.slv_data(buffer64.int_current_index - 1 downto 0) &
+                              (buffer64.int_current_index - 1 downto 0 => '0');
+            slv_data_out               <= revert_vector(v_slv_data_out);
+          end if;
         end if;
       end if;
 

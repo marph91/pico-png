@@ -47,7 +47,7 @@ architecture behavioral of huffman is
 
   signal slv_current_value : std_logic_vector(C_INPUT_BITWIDTH - 1 downto 0) := (others => '0');
 
-  type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, EOB, SEND_BYTES, SEND_BYTES_FINAL);
+  type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_BITS, DISTANCE_CODE, EXTRA_DISTANCE_BITS, EOB, PAD, SEND_BYTES, SEND_BYTES_FINAL);
 
   signal state : t_states := IDLE;
 
@@ -278,6 +278,21 @@ begin
             barrel_shifter.int_bits      <= 7;
             barrel_shifter.sl_descending <= '1';
 
+            state <= PAD;
+
+          when PAD =>
+            -- Current index of the buffer needs to be updated manually, since it
+            -- gets the desired value only at the next cycle.
+            if ((buffer64.int_current_index + 7) mod 8 /= 0) then
+              -- pad zeros (for full byte) at the end
+              barrel_shifter.sl_valid_in   <= '1';
+              barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(0, 13));
+              barrel_shifter.int_bits      <= 8 - (buffer64.int_current_index + 7) mod 8;
+              barrel_shifter.sl_descending <= '1';
+            else
+              barrel_shifter.sl_valid_in <= '0';
+            end if;
+
             state <= SEND_BYTES_FINAL;
 
           when SEND_BYTES =>
@@ -309,10 +324,6 @@ begin
         sl_valid_out            <= '0';
         sl_aggregation_finished <= '0';
 
-        if (state = EOB) then
-          sl_bfinal <= '1';
-        end if;
-
         if (barrel_shifter.sl_valid_in = '1') then
           buffer64.int_current_index <= buffer64.int_current_index + barrel_shifter.int_bits;
 
@@ -338,17 +349,8 @@ begin
           sl_valid_out               <= '1';
           v_slv_data_out := buffer64.slv_data(buffer64.int_current_index - 1 downto buffer64.int_current_index - 8);
           slv_data_out               <= revert_vector(v_slv_data_out);
-        elsif (sl_bfinal = '1') then
-          sl_bfinal               <= '0';
+        elsif (state = SEND_BYTES_FINAL) then
           sl_aggregation_finished <= '1';
-          if (buffer64.int_current_index /= 0) then
-            -- pad zeros (for full byte) at the end
-            buffer64.int_current_index <= 0;
-            sl_valid_out               <= '1';
-            v_slv_data_out := buffer64.slv_data(buffer64.int_current_index - 1 downto 0) &
-                              (buffer64.int_current_index - 1 downto 0 => '0');
-            slv_data_out               <= revert_vector(v_slv_data_out);
-          end if;
         end if;
       end if;
 

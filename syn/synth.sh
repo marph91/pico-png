@@ -11,6 +11,7 @@ cd build
 ghdl -a --std=08 --work=util "$ROOT/src/util/huffman_pkg.vhd"
 ghdl -a --std=08 --work=util "$ROOT/src/util/math_pkg.vhd"
 ghdl -a --std=08 --work=util "$ROOT/src/util/png_pkg.vhd"
+ghdl -a --std=08 --work=png_lib "$ROOT/src/bram.vhd"
 ghdl -a --std=08 --work=png_lib "$ROOT/src/lzss.vhd"
 ghdl -a --std=08 --work=png_lib "$ROOT/src/adler32.vhd"
 ghdl -a --std=08 --work=png_lib "$ROOT/src/crc32.vhd"

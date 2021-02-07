@@ -2,6 +2,8 @@ library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
 
+library png_lib;
+
 library util;
   use util.math_pkg.all;
   use util.png_pkg.all;
@@ -56,6 +58,7 @@ architecture behavioral of lzss is
 
   signal int_datums_to_flush : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
   signal sl_last_input       : std_logic := '0';
+  signal sl_flush            : std_logic := '0';
 
   signal int_match_offset : integer range 0 to C_SEARCH_BUFFER_SIZE;
 
@@ -67,7 +70,25 @@ architecture behavioral of lzss is
   signal slv_match_offset : std_logic_vector(max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH + 1)) - 1 downto 0);
   signal slv_match_length : std_logic_vector(log2(C_MAX_MATCH_LENGTH + 1) - 1 downto 0);
 
+  -- Input buffer BRAM.
+  signal slv_bram_raddr    : std_logic_vector(8 downto 0) := (others => '0');
+  signal slv_bram_waddr    : std_logic_vector(8 downto 0) := (others => '0');
+  signal slv_bram_waddr_d1 : std_logic_vector(8 downto 0) := (others => '0');
+  signal slv_bram_data_out : std_logic_vector(islv_data'range);
+
 begin
+
+  i_input_buffer : entity png_lib.bram
+    port map (
+      isl_clk => isl_clk,
+
+      isl_we     => isl_valid,
+      islv_waddr => slv_bram_waddr,
+      islv_data  => islv_data,
+
+      islv_raddr => slv_bram_raddr,
+      oslv_data  => slv_bram_data_out
+    );
 
   proc_lzss : process (isl_clk) is
 
@@ -78,16 +99,18 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
-      -- When flushing, all inputs should be transmitted already.
-      assert not (isl_valid = '1' and int_datums_to_flush /= 0);
-      -- Inputs should only occur at the FILL state.
-      assert not (isl_valid = '1' and state /= FILL);
+      if (isl_valid = '1') then
+        slv_bram_waddr <= std_logic_vector(unsigned(slv_bram_waddr) + 1);
+      end if;
+
+      -- One cycle write delay.
+      slv_bram_waddr_d1 <= slv_bram_waddr;
 
       osl_finish   <= '0';
       sl_valid_out <= '0';
 
       if (isl_flush = '1') then
-        int_datums_to_flush <= C_INPUT_BUFFER_SIZE - 1;
+        sl_flush <= '1';
       end if;
 
       case state is
@@ -97,18 +120,24 @@ begin
           state              <= FILL;
 
         when FILL =>
+          -- TODO: Simplify this state.
+
           -- Fill the buffer at three occasions:
           -- 1. Initially.
           -- 2. After a match or literal.
           -- 3. For flushing at the end.
-          if (isl_valid = '1') then
-            int_datums_to_fill <= int_datums_to_fill - 1;
-            a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & islv_data;
-          end if;
+          if (slv_bram_waddr_d1 /= slv_bram_raddr) then
+            slv_bram_raddr <= std_logic_vector(unsigned(slv_bram_raddr) + 1);
 
+            int_datums_to_fill <= int_datums_to_fill - 1;
+            a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & slv_bram_data_out;
+          end if;
           if (int_datums_to_fill = 0) then
             state          <= FIND_MATCH_OFFSET;
             rec_best_match <= (0, 0, a_buffer(0));
+          elsif (sl_flush = '1') then
+            sl_flush            <= '0';
+            int_datums_to_flush <= C_INPUT_BUFFER_SIZE - 1;
           elsif (int_datums_to_flush /= 0) then
             int_datums_to_fill  <= int_datums_to_fill - 1;
             a_buffer            <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & "UUUUUUUU";

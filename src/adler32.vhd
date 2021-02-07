@@ -20,7 +20,8 @@ end entity adler32;
 
 architecture behavioral of adler32 is
 
-  signal slv_data_in : std_logic_vector(C_INPUT_BITWIDTH - 1 downto 0) := (others => '0');
+  signal isl_valid_d1 : std_logic;
+  signal islv_data_d1 : std_logic_vector(islv_data'range);
 
   type t_states is (CALC_S1, CALC_S2);
 
@@ -33,35 +34,47 @@ begin
 
   proc_adler32 : process (isl_clk) is
 
-    variable v_int_s2 : integer range 0 to 2 ** 16 - 1;
-    variable v_sum1   : integer range 0 to 2 ** 17 - 1;
-    variable v_sum2   : integer range 0 to 2 ** 17 - 1;
+    variable v_data_in : std_logic_vector(islv_data'range);
+    variable v_int_s2  : integer range 0 to 2 ** 16 - 1;
+    variable v_sum1    : integer range 0 to 2 ** 17 - 1;
+    variable v_sum2    : integer range 0 to 2 ** 17 - 1;
 
   begin
 
     if (rising_edge(isl_clk)) then
       assert C_INPUT_BITWIDTH mod 8 = 0;
-      assert not (isl_valid = '1' and state /= CALC_S1);
-      assert not (isl_valid = '1' and isl_start = '1');
 
+      -- Adler checksum needs to be initialized first.
+      -- TODO: Check this formally via PSL.
+      assert not (isl_valid = '1' and isl_start = '1');
       if (isl_start = '1') then
         slv_current_adler_checksum <= x"00000001";
       end if;
+
+      -- Incoming data can be processed every second cycle.
+      assert not (isl_valid = '1' and isl_valid_d1 = '1');
+      isl_valid_d1 <= isl_valid;
+      islv_data_d1 <= islv_data;
 
       case state is
 
         when CALC_S1 =>
 
           if (isl_valid = '1') then
-            v_sum1 := to_integer(unsigned(slv_current_adler_checksum(15 downto 0))) +
-                      to_integer(unsigned(islv_data((0 + 1) * 8 - 1 downto 0 * 8)));
-            -- Calculate the modulo manually, since it uses less resources and yields better timing.
-            if (v_sum1 < 65521) then
-              int_s1 <= v_sum1;
-            else
-              int_s1 <= v_sum1 - 65521;
-            end if;
+            v_data_in := islv_data;
             state <= CALC_S2;
+          elsif (isl_valid_d1 = '1') then
+            v_data_in := islv_data_d1;
+            state <= CALC_S2;
+          end if;
+
+          v_sum1 := to_integer(unsigned(slv_current_adler_checksum(15 downto 0))) +
+                    to_integer(unsigned(v_data_in((0 + 1) * 8 - 1 downto 0 * 8)));
+          -- Calculate the modulo manually, since it uses less resources and yields better timing.
+          if (v_sum1 < 65521) then
+            int_s1 <= v_sum1;
+          else
+            int_s1 <= v_sum1 - 65521;
           end if;
 
         when CALC_S2 =>

@@ -28,6 +28,7 @@ end entity huffman;
 architecture behavioral of huffman is
 
   -- Maximum buffer size should be max. distance_bits + max. distance_extra_bits = 5 + 13.
+
   type t_buffer32 is record
     int_current_index : integer range 0 to 31;
     slv_data          : std_logic_vector(31 downto 0);
@@ -86,7 +87,7 @@ begin
       end if;
 
       -- defaults
-      barrel_shifter.sl_valid_in <= '0';
+      barrel_shifter.sl_valid_in   <= '0';
       barrel_shifter.sl_descending <= '1';
 
       case state is
@@ -134,8 +135,8 @@ begin
             to_string(v_huffman_code.lit.bits);
 
           barrel_shifter.sl_valid_in <= '1';
-          barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.lit.value, 13));
-          barrel_shifter.int_bits      <= v_huffman_code.lit.bits;
+          barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.lit.value, 13));
+          barrel_shifter.int_bits    <= v_huffman_code.lit.bits;
 
           state <= WAIT_FOR_INPUT;
 
@@ -150,8 +151,8 @@ begin
             to_string(v_huffman_code.length.bits);
 
           barrel_shifter.sl_valid_in <= '1';
-          barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.length.value, 13));
-          barrel_shifter.int_bits      <= v_huffman_code.length.bits;
+          barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.length.value, 13));
+          barrel_shifter.int_bits    <= v_huffman_code.length.bits;
 
           state <= EXTRA_LENGTH_CODE;
 
@@ -165,7 +166,7 @@ begin
             to_string(v_huffman_code.length_extra.bits);
 
           if (v_huffman_code.length_extra.bits /= 0) then
-            barrel_shifter.sl_valid_in <= '1';
+            barrel_shifter.sl_valid_in   <= '1';
             barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.length_extra.value, 13)));
             barrel_shifter.int_bits      <= v_huffman_code.length_extra.bits;
             barrel_shifter.sl_descending <= '0';
@@ -184,8 +185,8 @@ begin
             to_string(v_huffman_code.distance.bits);
 
           barrel_shifter.sl_valid_in <= '1';
-          barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(v_huffman_code.distance.value, 13));
-          barrel_shifter.int_bits      <= v_huffman_code.distance.bits;
+          barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.distance.value, 13));
+          barrel_shifter.int_bits    <= v_huffman_code.distance.bits;
 
           state <= EXTRA_DISTANCE_CODE;
 
@@ -199,7 +200,7 @@ begin
             to_string(v_huffman_code.distance_extra.bits);
 
           if (v_huffman_code.distance_extra.bits /= 0) then
-            barrel_shifter.sl_valid_in <= '1';
+            barrel_shifter.sl_valid_in   <= '1';
             barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.distance_extra.value, 13)));
             barrel_shifter.int_bits      <= v_huffman_code.distance_extra.bits;
             barrel_shifter.sl_descending <= '0';
@@ -210,8 +211,8 @@ begin
         when EOB =>
           -- append end of block -> eob is 7 bit zeros (256) -> zeros get appended anyway
           barrel_shifter.sl_valid_in <= '1';
-          barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(0, 13));
-          barrel_shifter.int_bits      <= 7;
+          barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
+          barrel_shifter.int_bits    <= 7;
 
           state <= PAD;
 
@@ -221,8 +222,8 @@ begin
           if ((buffer32.int_current_index + 7) mod 8 /= 0) then
             -- pad zeros (for full byte) at the end
             barrel_shifter.sl_valid_in <= '1';
-            barrel_shifter.slv_data_in   <= std_logic_vector(to_unsigned(0, 13));
-            barrel_shifter.int_bits      <= 8 - (buffer32.int_current_index + 7) mod 8;
+            barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
+            barrel_shifter.int_bits    <= 8 - (buffer32.int_current_index + 7) mod 8;
           end if;
 
           state <= SEND_BYTES_FINAL;

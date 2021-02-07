@@ -47,13 +47,12 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
+      sl_valid_out <= '0';
+      sl_rdy       <= '0';
 
       case state is
 
         when IDLE =>
-          sl_valid_out <= '0';
-          sl_rdy       <= '0';
-
           if (isl_start = '1') then
             state <= SEND_FILTER_TYPE;
           end if;
@@ -66,11 +65,11 @@ begin
             -- pixel left of the first scanline pixel are treated as 0
             slv_last_pixel_data <= "00000000";
             state               <= APPLY_FILTER;
-          else
-            sl_valid_out <= '0';
           end if;
 
         when APPLY_FILTER =>
+          sl_rdy <= '1';
+
           if (C_ROW_FILTER_TYPE = 0) then
             slv_data_out <= islv_data;
           elsif (C_ROW_FILTER_TYPE = 1) then
@@ -83,10 +82,9 @@ begin
           else
             report "Row filter type " & to_string(C_ROW_FILTER_TYPE) & " not yet implemented." severity error;
           end if;
-          sl_valid_out <= isl_valid;
-          sl_rdy       <= '1';
 
           if (isl_valid = '1') then
+            sl_valid_out <= '1';
             -- Counting down uses more resources.
             if (int_channel_cnt /= C_IMG_DEPTH - 1) then
               int_channel_cnt <= int_channel_cnt + 1;
@@ -109,9 +107,7 @@ begin
 
         when DELAY =>
           -- delay for slower input to zlib compression
-          sl_valid_out <= '0';
-          sl_rdy       <= '0';
-          state        <= SEND_FILTER_TYPE;
+          state <= SEND_FILTER_TYPE;
 
       end case;
 

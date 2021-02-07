@@ -107,7 +107,6 @@ architecture behavioral of png_encoder is
   signal slv_data_out_zlib : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out_zlib : std_logic := '0';
   signal sl_start_zlib     : std_logic := '0';
-  signal sl_rdy_zlib       : std_logic := '0';
   signal sl_finish_zlib    : std_logic := '0';
 
   -- idat chunk
@@ -145,7 +144,7 @@ begin
     port map (
       isl_clk   => isl_clk,
       isl_start => sl_start_row_filter,
-      isl_get   => sl_rdy_zlib,
+      isl_get   => '1',
       isl_valid => isl_valid,
       islv_data => islv_data,
       oslv_data => slv_data_out_row_filter,
@@ -168,8 +167,7 @@ begin
       islv_data  => slv_data_in_zlib,
       oslv_data  => slv_data_out_zlib,
       osl_valid  => sl_valid_out_zlib,
-      osl_finish => sl_finish_zlib,
-      osl_rdy    => sl_rdy_zlib
+      osl_finish => sl_finish_zlib
     );
 
   i_crc32 : entity png_lib.crc32

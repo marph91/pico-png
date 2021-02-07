@@ -22,8 +22,7 @@ entity deflate is
     islv_data  : in    std_logic_vector(7 downto 0);
     oslv_data  : out   std_logic_vector(7 downto 0);
     osl_valid  : out   std_logic;
-    osl_finish : out   std_logic;
-    osl_rdy    : out   std_logic
+    osl_finish : out   std_logic
   );
 end entity deflate;
 
@@ -60,13 +59,11 @@ begin
       port map (
         isl_clk    => isl_clk,
         isl_flush  => isl_flush,
-        isl_get    => sl_rdy_huffman,
         isl_valid  => isl_valid,
         islv_data  => islv_data,
         oslv_data  => slv_data_out_lzss,
         osl_valid  => sl_valid_out_lzss,
-        osl_finish => sl_finish_lzss,
-        osl_rdy    => sl_rdy_lzss
+        osl_finish => sl_finish_lzss
       );
 
   end generate gen_compression;
@@ -84,10 +81,7 @@ begin
       islv_data  => slv_data_out_lzss,
       oslv_data  => oslv_data,
       osl_valid  => osl_valid,
-      osl_finish => osl_finish,
-      osl_rdy    => sl_rdy_huffman
+      osl_finish => osl_finish
     );
-
-  osl_rdy <= sl_rdy_lzss and sl_rdy_huffman;
 
 end architecture behavioral;

@@ -20,8 +20,7 @@ entity huffman is
     islv_data  : in    std_logic_vector(C_INPUT_BITWIDTH - 1 downto 0);
     oslv_data  : out   std_logic_vector(7 downto 0);
     osl_valid  : out   std_logic;
-    osl_finish : out   std_logic;
-    osl_rdy    : out   std_logic
+    osl_finish : out   std_logic
   );
 end entity huffman;
 
@@ -279,9 +278,6 @@ begin
     end if;
 
   end process proc_aggregator;
-
-  osl_rdy <= '1' when state = WAIT_FOR_INPUT else
-             '0';
 
   oslv_data  <= slv_data_out;
   osl_valid  <= sl_valid_out;

@@ -18,13 +18,11 @@ entity lzss is
   port (
     isl_clk    : in    std_logic;
     isl_flush  : in    std_logic;
-    isl_get    : in    std_logic;
     isl_valid  : in    std_logic;
     islv_data  : in    std_logic_vector(7 downto 0);
     oslv_data  : out   std_logic_vector(calc_huffman_bitwidth(1, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER) - 1 downto 0);
     osl_valid  : out   std_logic;
-    osl_finish : out   std_logic;
-    osl_rdy    : out   std_logic
+    osl_finish : out   std_logic
   );
 end entity lzss;
 
@@ -234,6 +232,5 @@ begin
   oslv_data <= '0' & slv_literal_data when int_datums_to_fill = 1 else
                '1' & slv_match_offset & slv_match_length;
   osl_valid <= sl_valid_out;
-  osl_rdy   <= '1';
 
 end architecture behavioral;

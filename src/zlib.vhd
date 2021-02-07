@@ -23,8 +23,7 @@ entity zlib is
     islv_data  : in    std_logic_vector(7 downto 0);
     oslv_data  : out   std_logic_vector(7 downto 0);
     osl_valid  : out   std_logic;
-    osl_finish : out   std_logic;
-    osl_rdy    : out   std_logic
+    osl_finish : out   std_logic
   );
 end entity zlib;
 
@@ -53,7 +52,6 @@ architecture behavioral of zlib is
   signal slv_data_deflate       : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_finish_deflate      : std_logic := '0';
   signal sl_finish_deflate_save : std_logic := '0';
-  signal sl_rdy_deflate         : std_logic := '0';
 
   signal slv_data_adler32 : std_logic_vector(31 downto 0) := (others => '0');
 
@@ -83,8 +81,7 @@ begin
       islv_data  => islv_data,
       oslv_data  => slv_data_deflate,
       osl_valid  => sl_valid_deflate,
-      osl_finish => sl_finish_deflate,
-      osl_rdy    => sl_rdy_deflate
+      osl_finish => sl_finish_deflate
     );
 
   i_adler32 : entity png_lib.adler32
@@ -163,7 +160,5 @@ begin
 
   osl_valid <= sl_valid_out;
   oslv_data <= slv_data_out;
-  osl_rdy   <= sl_rdy_deflate when state = DEFLATE else
-               '0';
 
 end architecture behavioral;

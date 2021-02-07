@@ -51,12 +51,10 @@ begin
   port map (
     isl_clk     => sl_clk,
     isl_flush   => sl_flush,
-    isl_get     => sl_get,
     isl_valid   => sl_valid_in,
     islv_data   => slv_data_in,
     oslv_data   => slv_data_out,
-    osl_valid   => sl_valid_out,
-    osl_rdy     => sl_rdy
+    osl_valid   => sl_valid_out
   );
   
   clk_gen(sl_clk, 10 ns);
@@ -82,13 +80,11 @@ begin
   begin
     wait until rising_edge(sl_clk);
     for i in 0 to width(data_src)-1 loop
-      while sl_rdy = '0' loop
-        sl_valid_in <= '0';
-        wait until rising_edge(sl_clk);
-      end loop;
       report "### input: " & integer'image(i);
       sl_valid_in <= '1';
       slv_data_in <= std_logic_vector(to_unsigned(get(data_src, i, 0), slv_data_in'length));
+      wait until rising_edge(sl_clk);
+      sl_valid_in <= '0';
       wait until rising_edge(sl_clk);
     end loop;
     sl_valid_in <= '0';

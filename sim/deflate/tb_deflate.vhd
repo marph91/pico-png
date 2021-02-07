@@ -53,8 +53,7 @@ begin
     islv_data   => slv_data_in,
     oslv_data   => slv_data_out,
     osl_valid   => sl_valid_out,
-    osl_finish  => sl_finish_out,
-    osl_rdy     => sl_rdy
+    osl_finish  => sl_finish_out
   );
   
   clk_gen(sl_clk, 10 ns);

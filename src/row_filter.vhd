@@ -97,8 +97,6 @@ begin
                 if (int_row_cnt /= C_IMG_HEIGHT - 1) then
                   state       <= DELAY;
                   int_row_cnt <= int_row_cnt + 1;
-                  -- Two cycles delay when sending the filter type.
-                  sl_rdy <= '0';
                 else
                   state       <= IDLE;
                   int_row_cnt <= 0;
@@ -108,7 +106,7 @@ begin
           end if;
 
         when DELAY =>
-          -- delay for slower input to zlib compression
+          -- Adler can only handle one input in two cycles. Slow it down here.
           state <= SEND_FILTER_TYPE;
 
       end case;

@@ -72,6 +72,7 @@ architecture behavioral of lzss is
 
   -- Input buffer BRAM.
   signal slv_bram_raddr    : std_logic_vector(8 downto 0) := (others => '0');
+  signal slv_bram_raddr_d1 : std_logic_vector(8 downto 0) := (others => '0');
   signal slv_bram_waddr    : std_logic_vector(8 downto 0) := (others => '0');
   signal slv_bram_waddr_d1 : std_logic_vector(8 downto 0) := (others => '0');
   signal slv_bram_data_out : std_logic_vector(islv_data'range);
@@ -103,8 +104,9 @@ begin
         slv_bram_waddr <= std_logic_vector(unsigned(slv_bram_waddr) + 1);
       end if;
 
-      -- One cycle write delay.
+      -- One cycle write and read delay.
       slv_bram_waddr_d1 <= slv_bram_waddr;
+      slv_bram_raddr_d1 <= slv_bram_raddr;
 
       osl_finish   <= '0';
       sl_valid_out <= '0';
@@ -126,15 +128,14 @@ begin
           -- 1. Initially.
           -- 2. After a match or literal.
           -- 3. For flushing at the end.
-          if (slv_bram_waddr_d1 /= slv_bram_raddr) then
+          if (int_datums_to_fill = 0) then
+            state          <= FIND_MATCH_OFFSET;
+            rec_best_match <= (0, 0, a_buffer(0));
+          elsif (slv_bram_waddr_d1 /= slv_bram_raddr and slv_bram_raddr = slv_bram_raddr_d1) then
             slv_bram_raddr <= std_logic_vector(unsigned(slv_bram_raddr) + 1);
 
             int_datums_to_fill <= int_datums_to_fill - 1;
             a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & slv_bram_data_out;
-          end if;
-          if (int_datums_to_fill = 0) then
-            state          <= FIND_MATCH_OFFSET;
-            rec_best_match <= (0, 0, a_buffer(0));
           elsif (sl_flush = '1') then
             sl_flush            <= '0';
             int_datums_to_flush <= C_INPUT_BUFFER_SIZE - 1;
@@ -222,7 +223,6 @@ begin
   oslv_data <= '0' & slv_literal_data when int_datums_to_fill = 1 else
                '1' & slv_match_offset & slv_match_length;
   osl_valid <= sl_valid_out;
-  osl_rdy   <= '1' when int_datums_to_fill /= 0 and isl_valid = '0' else
-               '0';
+  osl_rdy   <= '1';
 
 end architecture behavioral;

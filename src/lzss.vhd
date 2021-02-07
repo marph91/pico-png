@@ -49,7 +49,7 @@ architecture behavioral of lzss is
 
   signal rec_best_match : t_match := (0, 0, (others => '0'));
 
-  type t_states is (IDLE, FILL, FIND_MATCH_OFFSET, FIND_MATCH_LENGTH, SEND_OUTPUT);
+  type t_states is (IDLE, FILL, FIND_MATCH_OFFSET, FIND_MATCH_LENGTH);
 
   signal state : t_states := IDLE;
 
@@ -68,12 +68,12 @@ architecture behavioral of lzss is
   signal slv_match_length : std_logic_vector(log2(C_MAX_MATCH_LENGTH + 1) - 1 downto 0);
 
   -- Input buffer BRAM.
-  constant C_ADDR_WIDTH : integer := 9;
-  signal slv_bram_raddr    : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
-  signal slv_bram_raddr_d1 : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
-  signal slv_bram_waddr    : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
-  signal slv_bram_waddr_d1 : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
-  signal slv_bram_data_out : std_logic_vector(islv_data'range);
+  constant C_ADDR_WIDTH      : integer := 9;
+  signal   slv_bram_raddr    : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
+  signal   slv_bram_raddr_d1 : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
+  signal   slv_bram_waddr    : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
+  signal   slv_bram_waddr_d1 : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
+  signal   slv_bram_data_out : std_logic_vector(islv_data'range);
 
 begin
 
@@ -173,7 +173,16 @@ begin
           if (v_int_match_offset = 0) then
             -- literal
             int_datums_to_fill <= 1;
-            state              <= SEND_OUTPUT;
+
+            -- output
+            sl_valid_out       <= '1';
+            if (sl_last_input = '0') then
+              state <= FILL;
+            else
+              sl_last_input <= '0';
+              state         <= IDLE;
+              osl_finish    <= '1';
+            end if;
           else
             -- match
             state            <= FIND_MATCH_LENGTH;
@@ -198,19 +207,15 @@ begin
           rec_best_match <= (int_match_offset, v_int_match_length, a_buffer(-v_int_match_length + 1));
 
           int_datums_to_fill <= v_int_match_length;
-          state              <= SEND_OUTPUT;
 
-        when SEND_OUTPUT =>
-          if (isl_get = '1') then
-            sl_valid_out <= '1';
-
-            if (sl_last_input = '0') then
-              state <= FILL;
-            else
-              sl_last_input <= '0';
-              state         <= IDLE;
-              osl_finish    <= '1';
-            end if;
+          -- output
+          sl_valid_out <= '1';
+          if (sl_last_input = '0') then
+            state <= FILL;
+          else
+            sl_last_input <= '0';
+            state         <= IDLE;
+            osl_finish    <= '1';
           end if;
 
       end case;

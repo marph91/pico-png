@@ -27,23 +27,10 @@ end entity huffman;
 
 architecture behavioral of huffman is
 
-  -- Maximum buffer size should be max. distance_bits + max. distance_extra_bits = 5 + 13.
-
-  type t_buffer32 is record
-    int_current_index : integer range 0 to 31;
-    slv_data          : std_logic_vector(31 downto 0);
-  end record;
-
-  signal buffer32 : t_buffer32 := (0, (others => '0'));
-
   signal sl_valid_out : std_logic := '0';
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
 
-  signal slv_block_data          : std_logic_vector(71 downto 0) := (others => '0');
-  signal int_block_bytes_to_send : integer range 0 to 16 := 0; -- TODO: range can be bigger
-
   signal sl_finish               : std_logic := '0';
-  signal sl_bfinal               : std_logic := '0';
   signal sl_flush                : std_logic := '0';
   signal sl_aggregation_finished : std_logic := '0';
 
@@ -53,14 +40,24 @@ architecture behavioral of huffman is
 
   signal state : t_states := IDLE;
 
-  type t_barrel_shifter is record
+  type t_aggregator is record
     sl_valid_in   : std_logic;
     slv_data_in   : std_logic_vector(12 downto 0);
     int_bits      : integer range 1 to 13;
     sl_descending : std_logic;
   end record;
 
-  signal barrel_shifter : t_barrel_shifter := ('0', (others => '0'), 1, '0');
+  signal aggregator : t_aggregator := ('0', (others => '0'), 1, '0');
+
+  -- Maximum buffer size should be max. distance_bits + max. distance_extra_bits = 5 + 13.
+  -- However, synthesis only works properly with power-of-two sizes.
+
+  type t_buffer32 is record
+    int_current_index : integer range 0 to 31;
+    slv_data          : std_logic_vector(31 downto 0);
+  end record;
+
+  signal buffer32 : t_buffer32 := (0, (others => '0'));
 
 begin
 
@@ -69,8 +66,7 @@ begin
   -- BTYPE & BFINAL are prepended to all data blocks (compressed and uncompressed)
   -- LEN and NLEN are specific to C_BTYPE = 0
 
-  -- https://www.ietf.org/rfc/rfc1951.txt
-  -- 3.2.6. Compression with fixed Huffman codes (BTYPE=01)
+  -- RFC 1951, 3.2.6. Compression with fixed Huffman codes (BTYPE=01)
   proc_fixed_huffman : process (isl_clk) is
 
     variable v_huffman_code : t_huffman_code;
@@ -87,8 +83,8 @@ begin
       end if;
 
       -- defaults
-      barrel_shifter.sl_valid_in   <= '0';
-      barrel_shifter.sl_descending <= '1';
+      aggregator.sl_valid_in   <= '0';
+      aggregator.sl_descending <= '1';
 
       case state is
 
@@ -97,11 +93,11 @@ begin
 
           -- send everything in one block
           -- TODO: revisit all the reverting
-          barrel_shifter.sl_valid_in <= '1';
-          barrel_shifter.slv_data_in <= revert_vector(std_logic_vector(to_unsigned(C_BTYPE, 2)) & '1') & "0000000000";
-          barrel_shifter.int_bits    <= 3;
+          aggregator.sl_valid_in <= '1';
+          aggregator.slv_data_in <= revert_vector(std_logic_vector(to_unsigned(C_BTYPE, 2)) & '1') & "0000000000";
+          aggregator.int_bits    <= 3;
           -- 0 if revert_vector() is used
-          barrel_shifter.sl_descending <= '0';
+          aggregator.sl_descending <= '0';
 
           state <= WAIT_FOR_INPUT;
 
@@ -134,9 +130,9 @@ begin
             to_string(v_huffman_code.lit.value) & " " &
             to_string(v_huffman_code.lit.bits);
 
-          barrel_shifter.sl_valid_in <= '1';
-          barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.lit.value, 13));
-          barrel_shifter.int_bits    <= v_huffman_code.lit.bits;
+          aggregator.sl_valid_in <= '1';
+          aggregator.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.lit.value, 13));
+          aggregator.int_bits    <= v_huffman_code.lit.bits;
 
           state <= WAIT_FOR_INPUT;
 
@@ -150,9 +146,9 @@ begin
             to_string(v_huffman_code.length.value) & " " &
             to_string(v_huffman_code.length.bits);
 
-          barrel_shifter.sl_valid_in <= '1';
-          barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.length.value, 13));
-          barrel_shifter.int_bits    <= v_huffman_code.length.bits;
+          aggregator.sl_valid_in <= '1';
+          aggregator.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.length.value, 13));
+          aggregator.int_bits    <= v_huffman_code.length.bits;
 
           state <= EXTRA_LENGTH_CODE;
 
@@ -166,10 +162,10 @@ begin
             to_string(v_huffman_code.length_extra.bits);
 
           if (v_huffman_code.length_extra.bits /= 0) then
-            barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.length_extra.value, 13)));
-            barrel_shifter.int_bits      <= v_huffman_code.length_extra.bits;
-            barrel_shifter.sl_descending <= '0';
+            aggregator.sl_valid_in   <= '1';
+            aggregator.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.length_extra.value, 13)));
+            aggregator.int_bits      <= v_huffman_code.length_extra.bits;
+            aggregator.sl_descending <= '0';
           end if;
 
           state <= DISTANCE_CODE;
@@ -184,9 +180,9 @@ begin
             to_string(v_huffman_code.distance.value) & " " &
             to_string(v_huffman_code.distance.bits);
 
-          barrel_shifter.sl_valid_in <= '1';
-          barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.distance.value, 13));
-          barrel_shifter.int_bits    <= v_huffman_code.distance.bits;
+          aggregator.sl_valid_in <= '1';
+          aggregator.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.distance.value, 13));
+          aggregator.int_bits    <= v_huffman_code.distance.bits;
 
           state <= EXTRA_DISTANCE_CODE;
 
@@ -200,19 +196,19 @@ begin
             to_string(v_huffman_code.distance_extra.bits);
 
           if (v_huffman_code.distance_extra.bits /= 0) then
-            barrel_shifter.sl_valid_in   <= '1';
-            barrel_shifter.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.distance_extra.value, 13)));
-            barrel_shifter.int_bits      <= v_huffman_code.distance_extra.bits;
-            barrel_shifter.sl_descending <= '0';
+            aggregator.sl_valid_in   <= '1';
+            aggregator.slv_data_in   <= revert_vector(std_logic_vector(to_unsigned(v_huffman_code.distance_extra.value, 13)));
+            aggregator.int_bits      <= v_huffman_code.distance_extra.bits;
+            aggregator.sl_descending <= '0';
           end if;
 
           state <= WAIT_FOR_INPUT;
 
         when EOB =>
           -- append end of block -> eob is 7 bit zeros (256) -> zeros get appended anyway
-          barrel_shifter.sl_valid_in <= '1';
-          barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
-          barrel_shifter.int_bits    <= 7;
+          aggregator.sl_valid_in <= '1';
+          aggregator.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
+          aggregator.int_bits    <= 7;
 
           state <= PAD;
 
@@ -221,9 +217,9 @@ begin
           -- gets the desired value only at the next cycle.
           if ((buffer32.int_current_index + 7) mod 8 /= 0) then
             -- pad zeros (for full byte) at the end
-            barrel_shifter.sl_valid_in <= '1';
-            barrel_shifter.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
-            barrel_shifter.int_bits    <= 8 - (buffer32.int_current_index + 7) mod 8;
+            aggregator.sl_valid_in <= '1';
+            aggregator.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
+            aggregator.int_bits    <= 8 - (buffer32.int_current_index + 7) mod 8;
           end if;
 
           state <= SEND_BYTES_FINAL;
@@ -240,7 +236,7 @@ begin
 
   end process proc_fixed_huffman;
 
-  proc_barrel_shifter : process (isl_clk) is
+  proc_aggregator : process (isl_clk) is
 
     -- only used to suppress a ghdl synthesis error
     -- TODO: extract a MWE and report the bug
@@ -252,24 +248,24 @@ begin
       sl_valid_out            <= '0';
       sl_aggregation_finished <= '0';
 
-      if (barrel_shifter.sl_valid_in = '1') then
-        buffer32.int_current_index <= buffer32.int_current_index + barrel_shifter.int_bits;
+      if (aggregator.sl_valid_in = '1') then
+        buffer32.int_current_index <= buffer32.int_current_index + aggregator.int_bits;
 
         -- shift the whole buffer
         for pos in buffer32.slv_data'RANGE loop
-          buffer32.slv_data(pos) <= buffer32.slv_data((pos - barrel_shifter.int_bits) mod buffer32.slv_data'LENGTH);
+          buffer32.slv_data(pos) <= buffer32.slv_data((pos - aggregator.int_bits) mod buffer32.slv_data'LENGTH);
         end loop;
 
-        -- insert new values, maximum 13 (barrel_shifter.int_bits)
+        -- insert new values, maximum 13 (aggregator.int_bits)
         for pos in 0 to 12 loop
-          exit when pos = barrel_shifter.int_bits;
+          exit when pos = aggregator.int_bits;
 
-          if (barrel_shifter.sl_descending = '1') then
-            buffer32.slv_data(pos) <= barrel_shifter.slv_data_in(pos);
+          if (aggregator.sl_descending = '1') then
+            buffer32.slv_data(pos) <= aggregator.slv_data_in(pos);
           else
             -- After reverting the bits, the important bits are at the other end of the slv.
-            -- I. e. starting at barrel_shifter.slv_data_in'HIGH, not 0.
-            buffer32.slv_data(pos) <= barrel_shifter.slv_data_in(barrel_shifter.slv_data_in'HIGH - barrel_shifter.int_bits + pos + 1);
+            -- I. e. starting at aggregator.slv_data_in'HIGH, not 0.
+            buffer32.slv_data(pos) <= aggregator.slv_data_in(aggregator.slv_data_in'HIGH - aggregator.int_bits + pos + 1);
           end if;
         end loop;
       elsif (buffer32.int_current_index >= 8) then
@@ -282,7 +278,7 @@ begin
       end if;
     end if;
 
-  end process proc_barrel_shifter;
+  end process proc_aggregator;
 
   osl_rdy <= '1' when state = WAIT_FOR_INPUT else
              '0';

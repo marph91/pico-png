@@ -68,15 +68,20 @@ architecture behavioral of lzss is
   signal slv_match_length : std_logic_vector(log2(C_MAX_MATCH_LENGTH + 1) - 1 downto 0);
 
   -- Input buffer BRAM.
-  signal slv_bram_raddr    : std_logic_vector(8 downto 0) := (others => '0');
-  signal slv_bram_raddr_d1 : std_logic_vector(8 downto 0) := (others => '0');
-  signal slv_bram_waddr    : std_logic_vector(8 downto 0) := (others => '0');
-  signal slv_bram_waddr_d1 : std_logic_vector(8 downto 0) := (others => '0');
+  constant C_ADDR_WIDTH : integer := 9;
+  signal slv_bram_raddr    : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
+  signal slv_bram_raddr_d1 : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
+  signal slv_bram_waddr    : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
+  signal slv_bram_waddr_d1 : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
   signal slv_bram_data_out : std_logic_vector(islv_data'range);
 
 begin
 
   i_input_buffer : entity png_lib.bram
+    generic map (
+      C_ADDR_WIDTH => C_ADDR_WIDTH,
+      C_DATA_WIDTH => 8
+    )
     port map (
       isl_clk => isl_clk,
 
@@ -128,11 +133,15 @@ begin
           if (int_datums_to_fill = 0) then
             state          <= FIND_MATCH_OFFSET;
             rec_best_match <= (0, 0, a_buffer(0));
-          elsif (slv_bram_waddr_d1 /= slv_bram_raddr and slv_bram_raddr = slv_bram_raddr_d1) then
-            slv_bram_raddr <= std_logic_vector(unsigned(slv_bram_raddr) + 1);
+          elsif (slv_bram_waddr_d1 /= slv_bram_raddr) then
+            -- First cycle: Assign new BRAM address.
+            -- Second cycle: Assign BRAM output.
+            if (slv_bram_raddr = slv_bram_raddr_d1) then
+              slv_bram_raddr <= std_logic_vector(unsigned(slv_bram_raddr) + 1);
 
-            int_datums_to_fill <= int_datums_to_fill - 1;
-            a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & slv_bram_data_out;
+              int_datums_to_fill <= int_datums_to_fill - 1;
+              a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & slv_bram_data_out;
+            end if;
           elsif (sl_flush = '1') then
             sl_flush            <= '0';
             int_datums_to_flush <= C_INPUT_BUFFER_SIZE - 1;

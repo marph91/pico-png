@@ -298,12 +298,8 @@ begin
 
   osl_valid <= sl_valid_out;
   oslv_data <= slv_data_out;
-  -- input data needs two cycles to lzss, because of row filter
-  osl_rdy    <= (
-                not isl_valid and
-                not isl_valid_d1 and
-                sl_rdy_zlib and
-                sl_rdy_row_filter) when state = ZLIB else
+  -- Adler and row filter can process only a word in two cycles.
+  osl_rdy    <= not isl_valid and sl_rdy_row_filter when state = ZLIB else
                 '0';
   osl_finish <= sl_finish;
 

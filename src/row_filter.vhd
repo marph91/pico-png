@@ -97,6 +97,8 @@ begin
                 if (int_row_cnt /= C_IMG_HEIGHT - 1) then
                   state       <= DELAY;
                   int_row_cnt <= int_row_cnt + 1;
+                  -- Two cycles delay when sending the filter type.
+                  sl_rdy <= '0';
                 else
                   state       <= IDLE;
                   int_row_cnt <= 0;

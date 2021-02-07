@@ -4,6 +4,7 @@ __pycache__
 .vscode
 gen
 build
+notes.txt
 test_scripts
 vivado
 vunit_out

@@ -6,6 +6,7 @@ library png_lib;
 
 library util;
   use util.math_pkg.all;
+  use util.png_pkg.all;
 
 entity zlib is
   generic (
@@ -65,11 +66,6 @@ architecture behavioral of zlib is
   signal buffered_output       : std_logic_vector(99 downto 0) := (others => '0');
   signal slv_data_out          : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out          : std_logic := '0';
-
-  function get_byte (vector: std_logic_vector; int_byte_index : natural) return std_logic_vector is
-  begin
-    return vector(int_byte_index * 8 - 1 downto (int_byte_index - 1) * 8);
-  end function;
 
 begin
 

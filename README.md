@@ -9,7 +9,7 @@
 
 - Row filter types: no filter, subtraction filter
 - Color types: gray, RGB, gray + alpha, RGBA
-- Zlib compression: no compression, fixed huffman tables
+- Zlib compression: fixed huffman tables
 
 For details about the configuration, see [here](doc/toplevel_interface.md).
 

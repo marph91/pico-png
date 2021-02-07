@@ -34,28 +34,33 @@ end package huffman_pkg;
 
 package body huffman_pkg is
 
+  -- Assert a integer value is in a specific range.
+  procedure assert_in_range (name : string; minimum : integer; maximum : integer; value : integer) is
+  begin
+    assert (minimum <= value and value <= maximum)
+      report "invalid " & name & to_string(value);
+  end;
+
+  -- Assert a huffman code is valid.
+  -- For details, see RFC1951 3.2.5. Compressed blocks (length and distance codes)
   procedure assert_huffman_code_valid (huffman_code : t_huffman_code) is
   begin
 
-    -- TODO: extend
-
     if (huffman_code.sl_match = '0') then
-      --   literal_bits         : integer range 8 to 9;
-      --   literal_value        : integer range 48 to 511;
-      assert (8 <= huffman_code.lit.bits and huffman_code.lit.bits <= 9) report "invalid literal bits";
+      assert_in_range("literal bitwidth", 8, 9, huffman_code.lit.bits);
+      assert_in_range("literal value", 48, 511, huffman_code.lit.value);
     else
-      --   length_bits          : integer range 7 to 8;
-      --   length_value         : integer range 257 to 285;
-      assert (7 <= huffman_code.length.bits and huffman_code.length.bits <= 8) report "invalid length bits";
-      --   length_extra_bits    : integer range 0 to 5;
-      --   length_extra_value   : integer range 0 to 2 ** 5;
-      assert (0 <= huffman_code.length_extra.bits and huffman_code.length_extra.bits <= 5) report "invalid length extra bits";
-      --   distance_bits        : integer range 5 to 5;
-      --   distance_value       : integer range 0 to 29;
-      assert (huffman_code.distance.bits = 5) report "invalid distance bits";
-      --   distance_extra_bits  : integer range 0 to 13;
-      --   distance_extra_value : integer range 0 to 2 ** 13;
-      assert (0 <= huffman_code.distance_extra.bits and huffman_code.distance_extra.bits <= 13) report "invalid distance extra bits";
+      assert_in_range("length bitwidth", 7, 8, huffman_code.length.bits);
+      assert_in_range("length value", 257, 285, huffman_code.length.value);
+
+      assert_in_range("length extra bitwidth", 0, 5, huffman_code.length_extra.bits);
+      assert_in_range("length extra value", 0, 2 ** 5 - 1, huffman_code.length_extra.value);
+
+      assert_in_range("distance bitwidth", 5, 5, huffman_code.distance.bits);
+      assert_in_range("distance value", 0, 29, huffman_code.distance.value);
+
+      assert_in_range("distance extra bitwidth", 0, 13, huffman_code.distance.bits);
+      assert_in_range("distance extra value", 0, 2 ** 13 - 1, huffman_code.distance.value);
     end if;
 
   end;

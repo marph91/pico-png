@@ -241,14 +241,26 @@ begin
     -- TODO: extract a MWE and report the bug
     variable v_slv_data_out : std_logic_vector(7 downto 0);
 
+    variable v_int_current_index : integer range 0 to 31;
+
   begin
 
     if (rising_edge(isl_clk)) then
       sl_valid_out            <= '0';
       sl_aggregation_finished <= '0';
 
+      v_int_current_index := buffer32.int_current_index;
+      if (v_int_current_index >= 8) then
+        sl_valid_out <= '1';
+        v_slv_data_out      := buffer32.slv_data(v_int_current_index - 1 downto v_int_current_index - 8);
+        slv_data_out <= revert_vector(v_slv_data_out);
+        v_int_current_index := v_int_current_index - 8;
+      elsif (state = SEND_BYTES_FINAL) then
+        sl_aggregation_finished <= '1';
+      end if;
+
       if (aggregator.sl_valid_in = '1') then
-        buffer32.int_current_index <= buffer32.int_current_index + aggregator.int_bits;
+        v_int_current_index := v_int_current_index + aggregator.int_bits;
 
         -- shift the whole buffer
         for pos in buffer32.slv_data'RANGE loop
@@ -267,14 +279,9 @@ begin
             buffer32.slv_data(pos) <= aggregator.slv_data_in(aggregator.slv_data_in'HIGH - aggregator.int_bits + pos + 1);
           end if;
         end loop;
-      elsif (buffer32.int_current_index >= 8) then
-        buffer32.int_current_index <= buffer32.int_current_index - 8;
-        sl_valid_out               <= '1';
-        v_slv_data_out := buffer32.slv_data(buffer32.int_current_index - 1 downto buffer32.int_current_index - 8);
-        slv_data_out               <= revert_vector(v_slv_data_out);
-      elsif (state = SEND_BYTES_FINAL) then
-        sl_aggregation_finished <= '1';
       end if;
+
+      buffer32.int_current_index <= v_int_current_index;
     end if;
 
   end process proc_aggregator;

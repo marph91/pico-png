@@ -95,6 +95,9 @@ begin
               else
                 int_column_cnt <= 0;
                 if (int_row_cnt /= C_IMG_HEIGHT - 1) then
+                  -- Adler can only handle one input in two cycles.
+                  -- Slow it down here and at the DALEY state.
+                  sl_rdy      <= '0';
                   state       <= DELAY;
                   int_row_cnt <= int_row_cnt + 1;
                 else
@@ -106,7 +109,6 @@ begin
           end if;
 
         when DELAY =>
-          -- Adler can only handle one input in two cycles. Slow it down here.
           state <= SEND_FILTER_TYPE;
 
       end case;

@@ -52,16 +52,15 @@ architecture behavioral of zlib is
   signal slv_data_deflate       : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_finish_deflate      : std_logic := '0';
   signal sl_finish_deflate_save : std_logic := '0';
+  signal sl_finish              : std_logic := '0';
 
   signal slv_data_adler32 : std_logic_vector(31 downto 0) := (others => '0');
 
-  type t_states is (IDLE, HEADERS, DEFLATE, ADLER32);
+  type t_states is (IDLE, HEADER_CMF, HEADER_FLG, DEFLATE, ADLER32);
 
   signal state : t_states;
 
-  -- bitbuffer
-  signal int_output_byte_index : integer range 0 to 9 := 0;
-  signal buffered_output       : std_logic_vector(99 downto 0) := (others => '0');
+  signal int_output_byte_index : integer range 0 to 4 := 0;
   signal slv_data_out          : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out          : std_logic := '0';
 
@@ -100,7 +99,8 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
-      osl_finish <= '0';
+      sl_finish    <= '0';
+      sl_valid_out <= '0';
 
       if (sl_finish_deflate = '1') then
         -- Save the finish impulse of deflate in case it can't be processed directly.
@@ -110,33 +110,26 @@ begin
       case state is
 
         when IDLE =>
-          sl_valid_out <= '0';
           if (isl_start = '1') then
-            state <= HEADERS;
+            state <= HEADER_CMF;
           end if;
 
-        when HEADERS =>
-          buffered_output(15 downto 0) <= C_CMF & C_FLG;
-          int_output_byte_index        <= 2;
-          state                        <= DEFLATE;
+        when HEADER_CMF =>
+          sl_valid_out <= '1';
+          slv_data_out <= C_CMF;
+          state        <= HEADER_FLG;
+
+        when HEADER_FLG =>
+          sl_valid_out <= '1';
+          slv_data_out <= C_FLG;
+          state        <= DEFLATE;
 
         when DEFLATE =>
-          sl_valid_out <= '0';
-
           if (sl_valid_deflate = '1') then
-            -- sll needs more resources
-            -- buffered_output <= buffered_output sll 8;
-            buffered_output <= buffered_output(buffered_output'HIGH - 8 downto 0) &
-                               slv_data_deflate(slv_data_deflate'HIGH downto slv_data_deflate'HIGH - 8 + 1);
-
-            int_output_byte_index <= int_output_byte_index + 1;
-          elsif (int_output_byte_index /= 0) then
-            sl_valid_out          <= '1';
-            slv_data_out          <= get_byte(buffered_output, int_output_byte_index);
-            int_output_byte_index <= int_output_byte_index - 1;
+            slv_data_out <= slv_data_deflate;
+            sl_valid_out <= '1';
           elsif (sl_finish_deflate_save = '1') then
             sl_finish_deflate_save <= '0';
-            sl_valid_out           <= '0';
             int_output_byte_index  <= 4;
             state                  <= ADLER32;
           end if;
@@ -147,9 +140,8 @@ begin
             slv_data_out          <= get_byte(slv_data_adler32, int_output_byte_index);
             int_output_byte_index <= int_output_byte_index - 1;
           else
-            sl_valid_out <= '0';
-            state        <= IDLE;
-            osl_finish   <= '1';
+            state     <= IDLE;
+            sl_finish <= '1';
           end if;
 
       end case;
@@ -158,7 +150,8 @@ begin
 
   end process proc_fsm;
 
-  osl_valid <= sl_valid_out;
-  oslv_data <= slv_data_out;
+  osl_valid  <= sl_valid_out;
+  oslv_data  <= slv_data_out;
+  osl_finish <= sl_finish;
 
 end architecture behavioral;

@@ -57,6 +57,7 @@ architecture behavioral of lzss is
   signal int_datums_to_flush : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
   signal sl_last_input       : std_logic := '0';
   signal sl_flush            : std_logic := '0';
+  signal sl_finish            : std_logic := '0';
 
   signal int_match_offset : integer range 0 to C_SEARCH_BUFFER_SIZE;
 
@@ -100,6 +101,10 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
+      -- defaults
+      sl_finish   <= '0';
+      sl_valid_out <= '0';
+
       if (isl_valid = '1') then
         slv_bram_waddr <= std_logic_vector(unsigned(slv_bram_waddr) + 1);
       end if;
@@ -107,9 +112,6 @@ begin
       -- One cycle write and read delay.
       slv_bram_waddr_d1 <= slv_bram_waddr;
       slv_bram_raddr_d1 <= slv_bram_raddr;
-
-      osl_finish   <= '0';
-      sl_valid_out <= '0';
 
       if (isl_flush = '1') then
         sl_flush <= '1';
@@ -160,7 +162,7 @@ begin
           elsif (sl_last_input = '1') then
             sl_last_input <= '0';
             state         <= IDLE;
-            osl_finish    <= '1';
+            sl_finish    <= '1';
           end if;
 
         when FAST_FILL =>
@@ -197,7 +199,7 @@ begin
             else
               sl_last_input <= '0';
               state         <= IDLE;
-              osl_finish    <= '1';
+              sl_finish    <= '1';
             end if;
           else
             -- match
@@ -238,7 +240,7 @@ begin
           else
             sl_last_input <= '0';
             state         <= IDLE;
-            osl_finish    <= '1';
+            sl_finish    <= '1';
           end if;
 
       end case;
@@ -257,5 +259,6 @@ begin
   oslv_data <= '0' & slv_literal_data when int_datums_to_fill = 1 else
                '1' & slv_match_offset & slv_match_length;
   osl_valid <= sl_valid_out;
+  osl_finish <= sl_finish;
 
 end architecture behavioral;

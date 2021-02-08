@@ -119,8 +119,7 @@ architecture behavioral of png_encoder is
   signal sl_valid_out          : std_logic := '0';
   signal slv_data_out          : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_finish             : std_logic := '0';
-  signal sl_flush, sl_flush_d1 : std_logic := '0';
-  signal isl_valid_d1          : std_logic := '0';
+  signal sl_flush : std_logic := '0';
 
   -- internal
 
@@ -161,7 +160,7 @@ begin
     )
     port map (
       isl_clk    => isl_clk,
-      isl_flush  => sl_flush_d1,
+      isl_flush  => sl_flush,
       isl_start  => sl_start_zlib,
       isl_valid  => sl_valid_in_zlib,
       islv_data  => slv_data_in_zlib,
@@ -185,8 +184,96 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
-      sl_valid_in_crc32 <= sl_valid_out_zlib;
-      slv_data_in_crc32 <= slv_data_out_zlib;
+      -- defaults
+      sl_valid_out <= '0';
+      sl_finish <= '0';
+      sl_start_row_filter <= '0';
+      sl_start_zlib       <= '0';
+      sl_valid_in_crc32 <= '0';
+
+      if (sl_valid_out_zlib = '1') then
+        int_idat_length <= int_idat_length + 1;
+      end if;
+
+      case state is
+
+        when IDLE =>
+          if (isl_start = '1') then
+            state     <= INIT_IDAT_CRC32;
+            int_index <= 4;
+          end if;
+
+        when INIT_IDAT_CRC32 =>
+          if (int_index /= 0) then
+            sl_valid_in_crc32 <= '1';
+            slv_data_in_crc32 <= get_byte(C_IDAT_TYPE, int_index);
+            int_index         <= int_index - 1;
+          else
+            state             <= INIT_ROW_FILTER;
+            sl_start_zlib     <= '1';
+          end if;
+
+        when INIT_ROW_FILTER =>
+          sl_start_row_filter <= '1';
+          state               <= ZLIB;
+
+        when ZLIB =>
+          sl_valid_in_zlib <= sl_valid_out_row_filter;
+          slv_data_in_zlib <= slv_data_out_row_filter;
+          sl_valid_in_crc32 <= sl_valid_out_zlib;
+          slv_data_in_crc32 <= slv_data_out_zlib;
+          sl_valid_out     <= sl_valid_out_zlib;
+          slv_data_out     <= slv_data_out_zlib;
+
+          if (sl_finish_zlib = '1') then
+            state     <= IDAT_CRC;
+            int_index <= 4;
+          end if;
+
+        when IDAT_CRC =>
+          if (int_index /= 0) then
+            int_index    <= int_index - 1;
+            slv_data_out <= get_byte(slv_data_out_crc32, int_index);
+            sl_valid_out <= '1';
+          else
+            state        <= IEND;
+            int_index    <= 12;
+          end if;
+
+        when IEND =>
+          if (int_index /= 0) then
+            slv_data_out <= get_byte(C_IEND, int_index);
+            sl_valid_out <= '1';
+            int_index    <= int_index - 1;
+          else
+            state        <= HEADERS;
+            int_index    <= slv_full_header'LENGTH / 8;
+
+            slv_full_header <= C_PNG_HEADER & C_IHDR & std_logic_vector(to_unsigned(int_idat_length, 32)) & C_IDAT_TYPE & x"000000";
+          end if;
+
+        when HEADERS =>
+          -- send headers last, because length of idat is needed,
+          -- which can be obtained only after all data got received
+          if (int_index /= 0) then
+            slv_data_out <= get_byte(slv_full_header, int_index);
+            sl_valid_out <= '1';
+            int_index    <= int_index - 1;
+          else
+            state        <= IDLE;
+            sl_finish    <= '1';
+          end if;
+
+      end case;
+
+    end if;
+
+  end process proc_fsm;
+
+  proc_generate_flush_impulse : process (isl_clk) is
+  begin
+    if (rising_edge(isl_clk)) then
+      sl_flush <= '0';
 
       if (isl_valid = '1') then
         if (int_channel_cnt /= 0) then
@@ -197,102 +284,13 @@ begin
         end if;
       end if;
 
-      if (sl_valid_out_zlib = '1') then
-        int_idat_length <= int_idat_length + 1;
+      -- isl_valid -> int_pixel_cnt -> sl_flush -> sl_finish_zlib
+      if (int_pixel_cnt = 0) then
+        int_pixel_cnt <= C_IMG_WIDTH * C_IMG_HEIGHT;
+        sl_flush      <= '1';
       end if;
-
-      sl_flush_d1  <= sl_flush;
-      isl_valid_d1 <= isl_valid;
-
-      case state is
-
-        when IDLE =>
-          sl_finish <= '0';
-          if (isl_start = '1') then
-            state     <= INIT_IDAT_CRC32;
-            int_index <= 4;
-          end if;
-
-        when INIT_IDAT_CRC32 =>
-          if (int_index /= 0) then
-            sl_valid_in_crc32 <= '1';
-            slv_data_in_crc32 <= C_IDAT_TYPE(int_index * 8 - 1 downto (int_index - 1) * 8);
-            int_index         <= int_index - 1;
-          else
-            sl_valid_in_crc32 <= '0';
-            state             <= INIT_ROW_FILTER;
-            sl_start_zlib     <= '1';
-          end if;
-
-        when INIT_ROW_FILTER =>
-          sl_start_zlib       <= '0';
-          sl_start_row_filter <= '1';
-          state               <= ZLIB;
-
-        when ZLIB =>
-          sl_start_row_filter <= '0';
-
-          sl_valid_in_zlib <= sl_valid_out_row_filter;
-          slv_data_in_zlib <= slv_data_out_row_filter;
-          sl_valid_out     <= sl_valid_out_zlib;
-          slv_data_out     <= slv_data_out_zlib;
-
-          -- isl_valid -> int_pixel_cnt -> sl_flush -> sl_finish_zlib
-          if (int_pixel_cnt = 0) then
-            int_pixel_cnt <= C_IMG_WIDTH * C_IMG_HEIGHT;
-            sl_flush      <= '1';
-          end if;
-          if (sl_flush = '1') then
-            sl_flush <= '0';
-          end if;
-
-          if (sl_finish_zlib = '1') then
-            state     <= IDAT_CRC;
-            int_index <= 4;
-          end if;
-
-        when IDAT_CRC =>
-          if (int_index /= 0) then
-            int_index    <= int_index - 1;
-            slv_data_out <= slv_data_out_crc32(int_index * 8 - 1 downto (int_index - 1) * 8);
-            sl_valid_out <= '1';
-          else
-            state        <= IEND;
-            int_index    <= 12;
-            sl_valid_out <= '0';
-          end if;
-
-        when IEND =>
-          if (int_index /= 0) then
-            slv_data_out <= C_IEND(int_index * 8 - 1 downto (int_index - 1) * 8);
-            sl_valid_out <= '1';
-            int_index    <= int_index - 1;
-          else
-            state        <= HEADERS;
-            sl_valid_out <= '0';
-            int_index    <= slv_full_header'LENGTH / 8;
-
-            slv_full_header <= C_PNG_HEADER & C_IHDR & std_logic_vector(to_unsigned(int_idat_length, 32)) & C_IDAT_TYPE & x"000000";
-          end if;
-
-        when HEADERS =>
-          -- send headers last, because length of idat is needed,
-          -- which can be obtained only after all data got received
-          if (int_index /= 0) then
-            slv_data_out <= slv_full_header(int_index * 8 - 1 downto (int_index - 1) * 8);
-            sl_valid_out <= '1';
-            int_index    <= int_index - 1;
-          else
-            state        <= IDLE;
-            sl_valid_out <= '0';
-            sl_finish    <= '1';
-          end if;
-
-      end case;
-
     end if;
-
-  end process proc_fsm;
+  end process;
 
   osl_valid <= sl_valid_out;
   oslv_data <= slv_data_out;

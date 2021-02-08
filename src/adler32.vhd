@@ -70,6 +70,7 @@ begin
 
           v_sum1 := to_integer(unsigned(slv_current_adler_checksum(15 downto 0))) +
                     to_integer(unsigned(v_data_in((0 + 1) * 8 - 1 downto 0 * 8)));
+
           -- Calculate the modulo manually, since it uses less resources and yields better timing.
           if (v_sum1 < 65521) then
             int_s1 <= v_sum1;

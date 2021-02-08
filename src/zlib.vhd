@@ -29,7 +29,7 @@ end entity zlib;
 
 architecture behavioral of zlib is
 
-  -- CMF |  FLG
+  -- CMF  |  FLG
   -- 0x08 | .... - window buffer size = 0
   -- 0x78 | 0x01 - No Compression/low
   -- 0x78 | 0x9C - Default Compression
@@ -99,11 +99,12 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
+      -- defaults
       sl_finish    <= '0';
       sl_valid_out <= '0';
 
+      -- Save the finish impulse of deflate in case it can't be processed directly.
       if (sl_finish_deflate = '1') then
-        -- Save the finish impulse of deflate in case it can't be processed directly.
         sl_finish_deflate_save <= '1';
       end if;
 

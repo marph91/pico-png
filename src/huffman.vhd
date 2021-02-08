@@ -78,6 +78,11 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
+      -- defaults
+      sl_finish <= '0';
+      aggregator.sl_valid_in   <= '0';
+      aggregator.sl_descending <= '1';
+
       -- assert not (state /= WAIT_FOR_INPUT and isl_valid = '1') report "Data can't be received in state " & to_string(state);
       isl_valid_d1 <= isl_valid;
       islv_data_d1 <= islv_data;
@@ -87,15 +92,9 @@ begin
         sl_flush <= '1';
       end if;
 
-      -- defaults
-      aggregator.sl_valid_in   <= '0';
-      aggregator.sl_descending <= '1';
-
       case state is
 
         when IDLE =>
-          sl_finish <= '0';
-
           -- send everything in one block
           -- TODO: revisit all the reverting
           aggregator.sl_valid_in <= '1';

@@ -47,6 +47,7 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
+      -- defaults
       sl_valid_out <= '0';
       sl_rdy       <= '0';
 

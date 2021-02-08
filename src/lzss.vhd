@@ -47,7 +47,7 @@ architecture behavioral of lzss is
 
   signal rec_best_match : t_match := (0, 0, (others => '0'));
 
-  type t_states is (IDLE, FILL, FIND_MATCH_OFFSET, FIND_MATCH_LENGTH);
+  type t_states is (IDLE, FILL, FAST_FILL, FIND_MATCH_OFFSET, FIND_MATCH_LENGTH);
 
   signal state : t_states := IDLE;
 
@@ -163,6 +163,17 @@ begin
             osl_finish    <= '1';
           end if;
 
+        when FAST_FILL =>
+          int_datums_to_fill <= int_datums_to_fill - 1;
+          a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & slv_bram_data_out;
+
+          if (int_datums_to_fill - 1 = 0) then
+            state          <= FIND_MATCH_OFFSET;
+            rec_best_match <= (0, 0, a_buffer(-1));
+          else
+            slv_bram_raddr <= std_logic_vector(unsigned(slv_bram_raddr) + 1);
+          end if;
+
         when FIND_MATCH_OFFSET =>
           -- Try to find the first C_MIN_MATCH_LENGTH elements of the input buffer
           -- in the search buffer.
@@ -216,7 +227,14 @@ begin
           -- output
           sl_valid_out <= '1';
           if (sl_last_input = '0') then
-            state <= FILL;
+            -- Use fast fill to avoid BRAM overflow.
+            -- Add C_MAX_MATCH_LENGTH instead of v_int_match_length to relax timing.
+            if (sl_flush = '0' and unsigned(slv_bram_raddr) + C_MAX_MATCH_LENGTH < unsigned(slv_bram_waddr)) then
+              state          <= FAST_FILL;
+              slv_bram_raddr <= std_logic_vector(unsigned(slv_bram_raddr) + 1);
+            else
+              state <= FILL;
+            end if;
           else
             sl_last_input <= '0';
             state         <= IDLE;

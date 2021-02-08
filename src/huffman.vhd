@@ -26,6 +26,8 @@ end entity huffman;
 
 architecture behavioral of huffman is
 
+  signal isl_valid_d1 : std_logic := '0';
+  signal islv_data_d1 : std_logic_vector(islv_data'range) := (others => '0');
   signal sl_valid_out : std_logic := '0';
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
 
@@ -76,6 +78,10 @@ begin
   begin
 
     if (rising_edge(isl_clk)) then
+      -- assert not (state /= WAIT_FOR_INPUT and isl_valid = '1') report "Data can't be received in state " & to_string(state);
+      isl_valid_d1 <= isl_valid;
+      islv_data_d1 <= islv_data;
+
       -- Preserve the flush impulse, since it might be not processed directly.
       if (isl_flush = '1') then
         sl_flush <= '1';
@@ -113,9 +119,19 @@ begin
               v_huffman_code.sl_match := '1';
             end if;
             slv_current_value <= islv_data;
-          end if;
-
-          if (sl_flush = '1') then
+          elsif (isl_valid_d1 = '1') then
+            if (islv_data_d1(islv_data_d1'HIGH) = '0') then
+              -- no match = literal/raw data
+              state <= LITERAL_CODE;
+              v_huffman_code.sl_match := '0';
+            else
+              -- match, following states:
+              -- LENGTH_CODE -> EXTRA_LENGTH_CODE -> DISTANCE_CODE -> EXTRA_DISTANCE_CODE
+              state <= LENGTH_CODE;
+              v_huffman_code.sl_match := '1';
+            end if;
+            slv_current_value <= islv_data_d1;
+          elsif (sl_flush = '1') then
             sl_flush <= '0';
             state    <= EOB;
           end if;

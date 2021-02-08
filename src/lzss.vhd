@@ -128,10 +128,7 @@ begin
           -- 1. Initially.
           -- 2. After a match or literal.
           -- 3. For flushing at the end.
-          if (int_datums_to_fill = 0) then
-            state          <= FIND_MATCH_OFFSET;
-            rec_best_match <= (0, 0, a_buffer(0));
-          elsif (slv_bram_waddr_d1 /= slv_bram_raddr) then
+          if (slv_bram_waddr_d1 /= slv_bram_raddr) then
             -- First cycle: Assign new BRAM address.
             -- Second cycle: Assign BRAM output.
             if (slv_bram_raddr = slv_bram_raddr_d1) then
@@ -139,6 +136,11 @@ begin
 
               int_datums_to_fill <= int_datums_to_fill - 1;
               a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & slv_bram_data_out;
+
+              if (int_datums_to_fill - 1 = 0) then
+                state          <= FIND_MATCH_OFFSET;
+                rec_best_match <= (0, 0, a_buffer(-1));
+              end if;
             end if;
           elsif (sl_flush = '1') then
             sl_flush            <= '0';
@@ -149,6 +151,11 @@ begin
             int_datums_to_flush <= int_datums_to_flush - 1;
             if (int_datums_to_flush = 1) then
               sl_last_input <= '1';
+            end if;
+
+            if (int_datums_to_fill - 1 = 0) then
+              state          <= FIND_MATCH_OFFSET;
+              rec_best_match <= (0, 0, a_buffer(-1));
             end if;
           elsif (sl_last_input = '1') then
             sl_last_input <= '0';
@@ -173,7 +180,7 @@ begin
             int_datums_to_fill <= 1;
 
             -- output
-            sl_valid_out       <= '1';
+            sl_valid_out <= '1';
             if (sl_last_input = '0') then
               state <= FILL;
             else

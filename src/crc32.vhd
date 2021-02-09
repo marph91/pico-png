@@ -19,7 +19,7 @@ end entity crc32;
 
 architecture behavioral of crc32 is
 
-  signal slv_current_crc : std_logic_vector(31 downto 0) := (others => '0');
+  signal slv_current_crc : std_logic_vector(oslv_data'range) := (others => '0');
 
 begin
 

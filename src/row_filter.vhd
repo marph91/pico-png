@@ -86,7 +86,6 @@ begin
 
           if (isl_valid = '1') then
             sl_valid_out <= '1';
-            -- Counting down uses more resources.
             if (int_channel_cnt /= C_IMG_DEPTH - 1) then
               int_channel_cnt <= int_channel_cnt + 1;
             else

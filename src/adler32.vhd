@@ -28,7 +28,7 @@ architecture behavioral of adler32 is
   signal state : t_states := CALC_S1;
 
   signal int_s1                     : integer range 0 to 2 ** 16 - 1;
-  signal slv_current_adler_checksum : std_logic_vector(31 downto 0) := (others => '0');
+  signal slv_current_adler_checksum : std_logic_vector(oslv_data'range) := (others => '0');
 
 begin
 
@@ -69,7 +69,7 @@ begin
           end if;
 
           v_sum1 := to_integer(unsigned(slv_current_adler_checksum(15 downto 0))) +
-                    to_integer(unsigned(v_data_in((0 + 1) * 8 - 1 downto 0 * 8)));
+                    to_integer(unsigned(get_byte(v_data_in, 1)));
 
           -- Calculate the modulo manually, since it uses less resources and yields better timing.
           if (v_sum1 < 65521) then

@@ -126,10 +126,10 @@ architecture behavioral of png_encoder is
   type t_states is (IDLE, INIT_IDAT_CRC32, HEADERS, INIT_ROW_FILTER, ZLIB, IDAT_CRC, IEND);
 
   signal state : t_states;
-  -- TODO: Do we need to assign these values with "isl_start"?
-  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1 := C_IMG_DEPTH - 1;
-  signal int_pixel_cnt   : integer range 0 to C_IMG_WIDTH * C_IMG_HEIGHT := C_IMG_WIDTH * C_IMG_HEIGHT;
-  signal int_index       : integer range 0 to 44 := 0;
+
+  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1 := 0;
+  signal int_pixel_cnt   : integer range 0 to C_IMG_WIDTH * C_IMG_HEIGHT - 1 := 0;
+  signal int_index       : integer range 0 to slv_full_header'length / 8 := 0;
 
 begin
 
@@ -247,7 +247,7 @@ begin
             int_index    <= int_index - 1;
           else
             state     <= HEADERS;
-            int_index <= slv_full_header'LENGTH / 8;
+            int_index <= slv_full_header'length / 8;
 
             slv_full_header <= C_PNG_HEADER & C_IHDR & std_logic_vector(to_unsigned(int_idat_length, 32)) & C_IDAT_TYPE & x"000000";
           end if;
@@ -276,19 +276,19 @@ begin
     if (rising_edge(isl_clk)) then
       sl_flush <= '0';
 
-      if (isl_valid = '1') then
-        if (int_channel_cnt /= 0) then
-          int_channel_cnt <= int_channel_cnt - 1;
-        else
-          int_channel_cnt <= C_IMG_DEPTH - 1;
-          int_pixel_cnt   <= int_pixel_cnt - 1;
-        end if;
-      end if;
-
       -- isl_valid -> int_pixel_cnt -> sl_flush -> sl_finish_zlib
-      if (int_pixel_cnt = 0) then
-        int_pixel_cnt <= C_IMG_WIDTH * C_IMG_HEIGHT;
-        sl_flush      <= '1';
+      if (isl_valid = '1') then
+        if (int_channel_cnt /= C_IMG_DEPTH - 1) then
+          int_channel_cnt <= int_channel_cnt + 1;
+        else
+          int_channel_cnt <= 0;
+          if (int_pixel_cnt /= C_IMG_WIDTH * C_IMG_HEIGHT - 1) then
+            int_pixel_cnt <= int_pixel_cnt + 1;
+          else
+            int_pixel_cnt <= 0;
+            sl_flush      <= '1';
+          end if;
+        end if;
       end if;
     end if;
 

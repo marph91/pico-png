@@ -29,13 +29,13 @@ architecture behavioral of huffman is
   signal isl_valid_d1 : std_logic := '0';
   signal islv_data_d1 : std_logic_vector(islv_data'range) := (others => '0');
   signal sl_valid_out : std_logic := '0';
-  signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
+  signal slv_data_out : std_logic_vector(oslv_data'range) := (others => '0');
 
   signal sl_finish               : std_logic := '0';
   signal sl_flush                : std_logic := '0';
   signal sl_aggregation_finished : std_logic := '0';
 
-  signal slv_current_value : std_logic_vector(C_INPUT_BITWIDTH - 1 downto 0) := (others => '0');
+  signal slv_current_value : std_logic_vector(islv_data'range) := (others => '0');
 
   type t_states is (IDLE, WAIT_FOR_INPUT, LITERAL_CODE, LENGTH_CODE, EXTRA_LENGTH_CODE, DISTANCE_CODE, EXTRA_DISTANCE_CODE, EOB, PAD, SEND_BYTES_FINAL);
 
@@ -74,6 +74,8 @@ begin
 
     variable v_int_match_length,
              v_int_match_distance : integer;
+
+    variable v_int_buffer_index_tmp : integer range 0 to 7;
 
   begin
 
@@ -229,11 +231,12 @@ begin
         when PAD =>
           -- Current index of the buffer needs to be updated manually, since it
           -- gets the desired value only at the next cycle.
-          if ((buffer32.int_current_index + 7) mod 8 /= 0) then
+          v_int_buffer_index_tmp := (buffer32.int_current_index + 7) mod 8;
+          if (v_int_buffer_index_tmp /= 0) then
             -- pad zeros (for full byte) at the end
             aggregator.sl_valid_in <= '1';
             aggregator.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
-            aggregator.int_bits    <= 8 - (buffer32.int_current_index + 7) mod 8;
+            aggregator.int_bits    <= 8 - v_int_buffer_index_tmp;
           end if;
 
           state <= SEND_BYTES_FINAL;
@@ -254,9 +257,9 @@ begin
 
     -- only used to suppress a ghdl synthesis error
     -- TODO: extract a MWE and report the bug
-    variable v_slv_data_out : std_logic_vector(7 downto 0);
+    variable v_slv_data_out : std_logic_vector(oslv_data'range);
 
-    variable v_int_current_index : integer range 0 to 31;
+    variable v_int_current_index : integer range 0 to buffer32.slv_data'length - 1;
 
   begin
 
@@ -264,6 +267,7 @@ begin
       sl_valid_out            <= '0';
       sl_aggregation_finished <= '0';
 
+      -- Output of aggregator.
       v_int_current_index := buffer32.int_current_index;
       if (v_int_current_index >= 8) then
         sl_valid_out <= '1';
@@ -274,6 +278,7 @@ begin
         sl_aggregation_finished <= '1';
       end if;
 
+      -- Input to aggregator.
       if (aggregator.sl_valid_in = '1') then
         v_int_current_index := v_int_current_index + aggregator.int_bits;
 

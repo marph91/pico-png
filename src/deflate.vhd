@@ -28,45 +28,28 @@ end entity deflate;
 
 architecture behavioral of deflate is
 
-  signal sl_valid_in_lzss  : std_logic := '0';
-  signal slv_data_in_lzss  : std_logic_vector(7 downto 0) := (others => '0');
   signal sl_valid_out_lzss : std_logic := '0';
   signal slv_data_out_lzss : std_logic_vector(calc_huffman_bitwidth(C_BTYPE, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER) - 1 downto 0) := (others => '0');
   signal sl_finish_lzss    : std_logic := '0';
-  signal sl_rdy_lzss       : std_logic := '0';
-
-  signal sl_valid_in_huffman : std_logic := '0';
-  signal slv_data_in_huffman : std_logic_vector(16 downto 0) := (others => '0');
-  signal sl_rdy_huffman      : std_logic := '0';
-
-  signal sl_valid_out : std_logic := '0';
+  signal sl_valid_out      : std_logic := '0';
 
 begin
 
-  gen_compression : if C_BTYPE = 0 generate
-    sl_finish_lzss    <= isl_flush;
-    sl_valid_out_lzss <= isl_valid;
-    slv_data_out_lzss <= islv_data;
-    sl_rdy_lzss       <= '1';
-  else generate
-
-    i_lzss : entity png_lib.lzss
-      generic map (
-        C_INPUT_BUFFER_SIZE     => C_INPUT_BUFFER_SIZE,
-        C_SEARCH_BUFFER_SIZE    => C_SEARCH_BUFFER_SIZE,
-        C_MAX_MATCH_LENGTH_USER => C_MAX_MATCH_LENGTH_USER
-      )
-      port map (
-        isl_clk    => isl_clk,
-        isl_flush  => isl_flush,
-        isl_valid  => isl_valid,
-        islv_data  => islv_data,
-        oslv_data  => slv_data_out_lzss,
-        osl_valid  => sl_valid_out_lzss,
-        osl_finish => sl_finish_lzss
-      );
-
-  end generate gen_compression;
+  i_lzss : entity png_lib.lzss
+    generic map (
+      C_INPUT_BUFFER_SIZE     => C_INPUT_BUFFER_SIZE,
+      C_SEARCH_BUFFER_SIZE    => C_SEARCH_BUFFER_SIZE,
+      C_MAX_MATCH_LENGTH_USER => C_MAX_MATCH_LENGTH_USER
+    )
+    port map (
+      isl_clk    => isl_clk,
+      isl_flush  => isl_flush,
+      isl_valid  => isl_valid,
+      islv_data  => islv_data,
+      oslv_data  => slv_data_out_lzss,
+      osl_valid  => sl_valid_out_lzss,
+      osl_finish => sl_finish_lzss
+    );
 
   i_huffman : entity png_lib.huffman
     generic map (

@@ -79,7 +79,7 @@ begin
 
     if (rising_edge(isl_clk)) then
       -- defaults
-      sl_finish <= '0';
+      sl_finish                <= '0';
       aggregator.sl_valid_in   <= '0';
       aggregator.sl_descending <= '1';
 

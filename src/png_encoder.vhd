@@ -113,7 +113,8 @@ architecture behavioral of png_encoder is
   signal sl_valid_in_crc32  : std_logic := '0';
   signal slv_data_in_crc32  : std_logic_vector(7 downto 0) := (others => '0');
   signal slv_data_out_crc32 : std_logic_vector(4 * 8 - 1 downto 0) := (others => '0');
-  signal int_idat_length    : integer range 0 to 2 ** 31 - 1 := 0;
+  -- TODO: ghdl bug: 2 ** 31 - 1 = 2147483647
+  signal int_idat_length    : integer range 0 to 2147483647 := 0;
 
   -- interface
   signal sl_valid_out : std_logic := '0';

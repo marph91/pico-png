@@ -49,6 +49,7 @@ if __name__ == "__main__":
     resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
                                                resource.RLIM_INFINITY))
 
-    PRJ = VUnit.from_argv()
+    PRJ = VUnit.from_argv(compile_builtins=False)
+    PRJ.add_vhdl_builtins()
     create_test_suites(PRJ)
     PRJ.main()

@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ghdl/vunit:gcc-master
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           apt update
@@ -15,4 +15,4 @@ jobs:
       - name: Run tests
         run: |
           cd sim
-          ./run_all.py -p4
+          python3 run_all.py -p4

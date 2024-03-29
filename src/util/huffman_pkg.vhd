@@ -114,7 +114,10 @@ package body huffman_pkg is
 
   begin
 
-    if (raw_value <= 10) then
+    if (raw_value <= 2) then
+      report "invalid length " & to_string(raw_value)
+        severity error;
+    elsif (raw_value <= 10) then
       v_code.value := 254 + raw_value;
     elsif (raw_value <= 12) then
       v_code.value := 265;
@@ -182,7 +185,10 @@ package body huffman_pkg is
 
   begin
 
-    if (raw_value <= 10 or raw_value = 285) then
+    if (raw_value <= 2) then
+      report "invalid length " & to_string(raw_value)
+        severity error;
+    elsif (raw_value <= 10 or raw_value = 285) then
       v_code := (0, 0);
       return v_code;
     end if;
@@ -297,7 +303,10 @@ package body huffman_pkg is
 
   begin
 
-    if (raw_value <= 4) then
+    if (raw_value <= 0) then
+      report "invalid distance " & to_string(raw_value)
+        severity error;
+    elsif (raw_value <= 4) then
       v_code := (0, 0);
       return v_code;
     end if;

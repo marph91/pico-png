@@ -143,7 +143,9 @@ begin
 
           v_huffman_code.lit := get_literal_code(to_integer(unsigned(slv_current_value(islv_data'high - 1 downto islv_data'high - 8))));
 
+          report "input_value, buffer index, literal, literal huffman, huffman bits";
           report "LITERAL_CODE " &
+                 to_string(slv_current_value) & " " &
                  to_string(buffer32.int_current_index) & " " &
                  to_string(to_integer(unsigned(slv_current_value(islv_data'high - 1 downto islv_data'high - 8)))) & " " &
                  to_string(v_huffman_code.lit.value) & " " &
@@ -160,7 +162,9 @@ begin
           v_int_match_length    := to_integer(unsigned(slv_current_value(C_MATCH_LENGTH_BITS - 1 downto 0)));
           v_huffman_code.length := get_length_code(v_int_match_length);
 
+          report "input_value, buffer index, match length, match length huffman, huffman bits";
           report "LENGTH_CODE " &
+                 to_string(slv_current_value) & " " &
                  to_string(buffer32.int_current_index) & " " &
                  to_string(v_int_match_length) & " " &
                  to_string(v_huffman_code.length.value) & " " &
@@ -176,7 +180,9 @@ begin
 
           v_huffman_code.length_extra := get_length_extra_code(v_int_match_length);
 
+          report "input_value, buffer index, match length, match length extra huffman, huffman bits";
           report "EXTRA_LENGTH_CODE " &
+                 to_string(slv_current_value) & " " &
                  to_string(buffer32.int_current_index) & " " &
                  to_string(v_int_match_length) & " " &
                  to_string(v_huffman_code.length_extra.value) & " " &
@@ -196,7 +202,9 @@ begin
           v_int_match_distance    := to_integer(unsigned(slv_current_value(islv_data'high - 1 downto C_MATCH_LENGTH_BITS)));
           v_huffman_code.distance := get_distance_code(v_int_match_distance);
 
+          report "input_value, buffer index, match distance, match distance huffman, huffman bits";
           report "DISTANCE_CODE " &
+                 to_string(slv_current_value) & " " &
                  to_string(buffer32.int_current_index) & " " &
                  to_string(v_int_match_distance) & " " &
                  to_string(v_huffman_code.distance.value) & " " &
@@ -212,6 +220,7 @@ begin
 
           v_huffman_code.distance_extra := get_distance_extra_code(v_int_match_distance);
 
+          report "input_value, buffer index, match distance, match distance extra huffman, huffman bits";
           report "EXTRA_DISTANCE_CODE " &
                  to_string(buffer32.int_current_index) & " " &
                  to_string(v_int_match_distance) & " " &

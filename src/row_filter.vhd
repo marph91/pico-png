@@ -33,6 +33,7 @@ architecture behavioral of row_filter is
   signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1  := 0;
 
   -- Row filter is applied pixel-wise. I. e. for each channel separately.
+
   type t_last_pixel is array(0 to C_IMG_DEPTH - 1) of std_logic_vector(7 downto 0);
 
   signal a_last_pixel : t_last_pixel                 := (others => (others => '0'));

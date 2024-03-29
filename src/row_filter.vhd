@@ -32,10 +32,13 @@ architecture behavioral of row_filter is
   signal int_row_cnt     : integer range 0 to C_IMG_HEIGHT - 1 := 0;
   signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1  := 0;
 
-  signal sl_valid_out        : std_logic                    := '0';
-  signal slv_data_out        : std_logic_vector(7 downto 0) := (others => '0');
-  signal slv_last_pixel_data : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_rdy              : std_logic                    := '0';
+  -- Row filter is applied pixel-wise. I. e. for each channel separately.
+  type t_last_pixel is array(0 to C_IMG_DEPTH - 1) of std_logic_vector(7 downto 0);
+
+  signal a_last_pixel : t_last_pixel                 := (others => (others => '0'));
+  signal sl_valid_out : std_logic                    := '0';
+  signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
+  signal sl_rdy       : std_logic                    := '0';
 
   type t_states is (IDLE, SEND_FILTER_TYPE, APPLY_FILTER, DELAY);
 
@@ -66,8 +69,8 @@ begin
             slv_data_out <= std_logic_vector(to_unsigned(C_ROW_FILTER_TYPE, 8));
 
             -- pixel left of the first scanline pixel are treated as 0
-            slv_last_pixel_data <= "00000000";
-            state               <= APPLY_FILTER;
+            a_last_pixel <= (others => (others => '0'));
+            state        <= APPLY_FILTER;
           end if;
 
         when APPLY_FILTER =>
@@ -79,9 +82,9 @@ begin
           elsif (C_ROW_FILTER_TYPE = 1) then
             -- unsigned arithmetic modulo 256 is used -> fits to 8 bit
             slv_data_out <= std_logic_vector(unsigned(islv_data) -
-                                             unsigned(slv_last_pixel_data));
+                                             unsigned(a_last_pixel(int_channel_cnt)));
             if (isl_valid = '1') then
-              slv_last_pixel_data <= islv_data;
+              a_last_pixel(int_channel_cnt) <= islv_data;
             end if;
           else
             report "Row filter type " & to_string(C_ROW_FILTER_TYPE) & " not yet implemented."
@@ -100,7 +103,7 @@ begin
                 int_column_cnt <= 0;
                 if (int_row_cnt /= C_IMG_HEIGHT - 1) then
                   -- Adler can only handle one input in two cycles.
-                  -- Slow it down here and at the DALEY state.
+                  -- Slow it down here and at the DELAY state.
                   sl_rdy      <= '0';
                   state       <= DELAY;
                   int_row_cnt <= int_row_cnt + 1;

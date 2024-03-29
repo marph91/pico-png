@@ -250,7 +250,7 @@ begin
   end process proc_lzss;
 
   -- In case of a literal (no match found), fill the output data with zeros.
-  slv_literal_data <= a_buffer(0) & (slv_literal_data'HIGH - a_buffer(0)'length - 1 downto 0 => '0');
+  slv_literal_data <= a_buffer(0) & (slv_literal_data'HIGH - a_buffer(0)'length downto 0 => '0');
   -- In case of a match, assure that the output bitwidth is at least 8.
   -- 8 bits are needed to represent a literal.
   slv_match_offset <= std_logic_vector(to_unsigned(rec_best_match.int_offset, max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH + 1))));

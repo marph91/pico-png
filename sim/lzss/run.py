@@ -102,6 +102,9 @@ def create_test_suite(tb_lib):
         Case("repeat", 11, 10, max_match_length,
              [0, 1, 2, 0, 1, 2, 0, 1, 2, 0],
              [Literal(0), Literal(1), Literal(2), Match(3, 7)]),
+        # Smoke test: Data doesn't matter. Just check if it compiles.
+        Case("max_buffers", 258, 32768, max_match_length,
+             [0], [Literal(0)]),
         Case("complex", 10, 12, max_match_length, complex_list,
              [Literal(0), Literal(1), Literal(2), Literal(3), Literal(4),
               Literal(5), Literal(6), Literal(2), Literal(7), Literal(5),

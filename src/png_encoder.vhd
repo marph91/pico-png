@@ -30,6 +30,7 @@ entity png_encoder is
     C_COLOR_TYPE : integer range 0 to 6 := 2;
 
     -- LZSS parameters
+    -- maximum match length is limited by C_INPUT_BUFFER_SIZE and C_MAX_MATCH_LENGTH_USER
     C_INPUT_BUFFER_SIZE     : integer range 3 to 258   := 12;
     C_SEARCH_BUFFER_SIZE    : integer range 1 to 32768 := 12;
     C_MAX_MATCH_LENGTH_USER : integer                  := 7;

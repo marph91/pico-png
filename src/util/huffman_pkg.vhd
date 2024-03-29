@@ -220,7 +220,11 @@ package body huffman_pkg is
 
   begin
 
-    if (raw_value <= 4) then
+    -- TODO: use datatype "positive"
+    if (raw_value <= 0) then
+      report "invalid distance " & to_string(raw_value)
+        severity error;
+    elsif (raw_value <= 4) then
       v_code.value := raw_value - 1;
     elsif (raw_value <= 6) then
       v_code.value := 4;

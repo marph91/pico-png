@@ -41,6 +41,11 @@ package png_pkg is
     chunk_data : std_logic_vector
   ) return std_logic_vector;
 
+  function calc_match_bits (
+    constant input_buffer_size : integer range 3 to 258;
+    constant max_match_length_user : integer
+  ) return integer;
+
   function calc_huffman_bitwidth (
     constant btype : integer range 0 to 3;
     constant input_buffer_size : integer range 3 to 258;
@@ -251,6 +256,17 @@ package body png_pkg is
 
   end function generate_chunk;
 
+  function calc_match_bits (
+    constant input_buffer_size : integer range 3 to 258;
+    constant max_match_length_user : integer
+  ) return integer is
+
+  begin
+
+    return log2(min_int(input_buffer_size, max_match_length_user) + 1);
+
+  end function;
+
   function calc_huffman_bitwidth (
     constant btype : integer range 0 to 3;
     constant input_buffer_size : integer range 3 to 258;
@@ -271,7 +287,7 @@ package body png_pkg is
 
     -- 1 bit match, distance/offset, length
     v_int_match_offset := log2(search_buffer_size);
-    v_int_match_length := log2(min_int(input_buffer_size, max_match_length_user) + 1);
+    v_int_match_length := calc_match_bits(input_buffer_size, max_match_length_user);
     -- At least 8 bit are needed to represent a literal.
     if (v_int_match_offset + v_int_match_length < 8) then
       report "Input and search buffer too small. Output bitwidth will be extended to 8 bit."

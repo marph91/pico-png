@@ -55,7 +55,7 @@ begin
     generic map (
       C_BTYPE             => C_BTYPE,
       C_INPUT_BITWIDTH    => calc_huffman_bitwidth(C_BTYPE, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER),
-      C_MATCH_LENGTH_BITS => log2(min_int(C_INPUT_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER) + 1)
+      C_MATCH_LENGTH_BITS => calc_match_bits(C_INPUT_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER)
     )
     port map (
       isl_clk    => isl_clk,

@@ -48,11 +48,11 @@ architecture behavioral of zlib is
   -- only used if FDICT = '1'
   constant C_DICTID : std_logic_vector(4 * 8 - 1 downto 0) := (others => '0');
 
-  signal sl_valid_deflate       : std_logic := '0';
+  signal sl_valid_deflate       : std_logic                    := '0';
   signal slv_data_deflate       : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_finish_deflate      : std_logic := '0';
-  signal sl_finish_deflate_save : std_logic := '0';
-  signal sl_finish              : std_logic := '0';
+  signal sl_finish_deflate      : std_logic                    := '0';
+  signal sl_finish_deflate_save : std_logic                    := '0';
+  signal sl_finish              : std_logic                    := '0';
 
   signal slv_data_adler32 : std_logic_vector(31 downto 0) := (others => '0');
 
@@ -60,9 +60,9 @@ architecture behavioral of zlib is
 
   signal state : t_states;
 
-  signal int_output_byte_index : integer range 0 to 4 := 0;
+  signal int_output_byte_index : integer range 0 to 4         := 0;
   signal slv_data_out          : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_valid_out          : std_logic := '0';
+  signal sl_valid_out          : std_logic                    := '0';
 
 begin
 
@@ -111,21 +111,25 @@ begin
       case state is
 
         when IDLE =>
+
           if (isl_start = '1') then
             state <= HEADER_CMF;
           end if;
 
         when HEADER_CMF =>
+
           sl_valid_out <= '1';
           slv_data_out <= C_CMF;
           state        <= HEADER_FLG;
 
         when HEADER_FLG =>
+
           sl_valid_out <= '1';
           slv_data_out <= C_FLG;
           state        <= DEFLATE;
 
         when DEFLATE =>
+
           if (sl_valid_deflate = '1') then
             slv_data_out <= slv_data_deflate;
             sl_valid_out <= '1';
@@ -136,6 +140,7 @@ begin
           end if;
 
         when ADLER32 =>
+
           if (int_output_byte_index /= 0) then
             sl_valid_out          <= '1';
             slv_data_out          <= get_byte(slv_data_adler32, int_output_byte_index);

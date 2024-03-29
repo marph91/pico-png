@@ -62,10 +62,10 @@ begin
 
           if (isl_valid = '1') then
             v_data_in := islv_data;
-            state <= CALC_S2;
+            state     <= CALC_S2;
           elsif (isl_valid_d1 = '1') then
             v_data_in := islv_data_d1;
-            state <= CALC_S2;
+            state     <= CALC_S2;
           end if;
 
           v_sum1 := to_integer(unsigned(slv_current_adler_checksum(15 downto 0))) +
@@ -79,6 +79,7 @@ begin
           end if;
 
         when CALC_S2 =>
+
           v_sum2 := int_s1 + to_integer(unsigned(slv_current_adler_checksum(31 downto 16)));
 
           if (v_sum2 < 65521) then

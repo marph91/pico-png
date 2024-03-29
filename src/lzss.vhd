@@ -52,12 +52,12 @@ architecture behavioral of lzss is
   signal state : t_states := IDLE;
 
   signal int_datums_to_fill : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
-  signal sl_valid_out       : std_logic := '0';
+  signal sl_valid_out       : std_logic                              := '0';
 
   signal int_datums_to_flush : integer range 0 to C_INPUT_BUFFER_SIZE := 0;
-  signal sl_last_input       : std_logic := '0';
-  signal sl_flush            : std_logic := '0';
-  signal sl_finish           : std_logic := '0';
+  signal sl_last_input       : std_logic                              := '0';
+  signal sl_flush            : std_logic                              := '0';
+  signal sl_finish           : std_logic                              := '0';
 
   signal int_match_offset : integer range 0 to C_SEARCH_BUFFER_SIZE;
 
@@ -67,7 +67,7 @@ architecture behavioral of lzss is
   signal slv_match_length : std_logic_vector(log2(C_MAX_MATCH_LENGTH + 1) - 1 downto 0);
 
   -- Input buffer BRAM.
-  constant C_ADDR_WIDTH      : integer := 9;
+  constant C_ADDR_WIDTH      : integer                                     := 9;
   signal   slv_bram_raddr    : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
   signal   slv_bram_raddr_d1 : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
   signal   slv_bram_waddr    : std_logic_vector(C_ADDR_WIDTH - 1 downto 0) := (others => '0');
@@ -120,10 +120,12 @@ begin
       case state is
 
         when IDLE =>
+
           int_datums_to_fill <= C_INPUT_BUFFER_SIZE;
           state              <= FILL;
 
         when FILL =>
+
           -- TODO: Simplify this state.
 
           -- Fill the buffer at three occasions:
@@ -137,7 +139,7 @@ begin
               slv_bram_raddr <= std_logic_vector(unsigned(slv_bram_raddr) + 1);
 
               int_datums_to_fill <= int_datums_to_fill - 1;
-              a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & slv_bram_data_out;
+              a_buffer           <= a_buffer(a_buffer'left - 1 downto a_buffer'right) & slv_bram_data_out;
 
               if (int_datums_to_fill - 1 = 0) then
                 state          <= FIND_MATCH_OFFSET;
@@ -149,7 +151,7 @@ begin
             int_datums_to_flush <= C_INPUT_BUFFER_SIZE - 1;
           elsif (int_datums_to_flush /= 0) then
             int_datums_to_fill  <= int_datums_to_fill - 1;
-            a_buffer            <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & "UUUUUUUU";
+            a_buffer            <= a_buffer(a_buffer'left - 1 downto a_buffer'right) & "UUUUUUUU";
             int_datums_to_flush <= int_datums_to_flush - 1;
             if (int_datums_to_flush = 1) then
               sl_last_input <= '1';
@@ -166,8 +168,9 @@ begin
           end if;
 
         when FAST_FILL =>
+
           int_datums_to_fill <= int_datums_to_fill - 1;
-          a_buffer           <= a_buffer(a_buffer'LEFT - 1 downto a_buffer'RIGHT) & slv_bram_data_out;
+          a_buffer           <= a_buffer(a_buffer'left - 1 downto a_buffer'right) & slv_bram_data_out;
 
           if (int_datums_to_fill - 1 = 0) then
             state          <= FIND_MATCH_OFFSET;
@@ -177,15 +180,19 @@ begin
           end if;
 
         when FIND_MATCH_OFFSET =>
+
           -- Try to find the first C_MIN_MATCH_LENGTH elements of the input buffer
           -- in the search buffer.
           v_int_match_offset := 0;
+
           for current_index in 1 to C_SEARCH_BUFFER_SIZE loop
+
             -- TODO: We look in the input buffer for searching.
             if (a_buffer(current_index downto current_index - C_MIN_MATCH_LENGTH + 1) =
                 a_buffer(0 downto - C_MIN_MATCH_LENGTH + 1)) then
               v_int_match_offset := current_index;
             end if;
+
           end loop;
 
           if (v_int_match_offset = 0) then
@@ -208,18 +215,22 @@ begin
           end if;
 
         when FIND_MATCH_LENGTH =>
+
           -- Get the length of the match if a matching element was found.
           -- I. e. try to match the next elements of search and input buffer.
 
           -- Note: v_int_match_length is one-based, match_length and input buffer are zero-based.
           v_int_match_length := C_MAX_MATCH_LENGTH;
+
           for match_length in C_MIN_MATCH_LENGTH to C_MAX_MATCH_LENGTH - 1 loop
+
             if (a_buffer(int_match_offset - match_length) /= a_buffer(-match_length)) then
               -- Don't look for further matches, since we got a mismatch.
               -- Assign the match length of the last loop, since it was the last match.
               v_int_match_length := match_length;
               exit;
             end if;
+
           end loop;
 
           rec_best_match <= (int_match_offset, v_int_match_length, a_buffer(-v_int_match_length + 1));
@@ -250,7 +261,7 @@ begin
   end process proc_lzss;
 
   -- In case of a literal (no match found), fill the output data with zeros.
-  slv_literal_data <= a_buffer(0) & (slv_literal_data'HIGH - a_buffer(0)'length downto 0 => '0');
+  slv_literal_data <= a_buffer(0) & (slv_literal_data'high - a_buffer(0)'length downto 0 => '0');
   -- In case of a match, assure that the output bitwidth is at least 8.
   -- 8 bits are needed to represent a literal.
   slv_match_offset <= std_logic_vector(to_unsigned(rec_best_match.int_offset, max_int(log2(C_SEARCH_BUFFER_SIZE), 8 - log2(C_MAX_MATCH_LENGTH + 1))));

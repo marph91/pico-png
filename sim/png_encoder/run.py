@@ -138,7 +138,7 @@ def create_test_suite(tb_lib):
     root = dirname(__file__)
     os.makedirs(join(root, "gen"), exist_ok=True)
 
-    tb_deflate = tb_lib.entity("tb_png_encoder")
+    tb_png_encoder = tb_lib.entity("tb_png_encoder")
 
     testcases = []
     for name, img_size, color_type, block_type, row_filter in itertools.product(
@@ -173,7 +173,7 @@ def create_test_suite(tb_lib):
             "C_ROW_FILTER_TYPE": case.row_filter,
             "C_MAX_MATCH_LENGTH_USER": 7,
         }
-        tb_deflate.add_config(
+        tb_png_encoder.add_config(
             name=case.id_, generics=generics,
             pre_config=partial(create_stimuli, root, case),
             post_check=partial(assemble_and_check_png, root, case))

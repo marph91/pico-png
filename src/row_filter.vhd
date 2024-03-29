@@ -28,14 +28,14 @@ end entity row_filter;
 
 architecture behavioral of row_filter is
 
-  signal int_column_cnt  : integer range 0 to C_IMG_WIDTH - 1 := 0;
+  signal int_column_cnt  : integer range 0 to C_IMG_WIDTH - 1  := 0;
   signal int_row_cnt     : integer range 0 to C_IMG_HEIGHT - 1 := 0;
-  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1 := 0;
+  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1  := 0;
 
-  signal sl_valid_out        : std_logic := '0';
+  signal sl_valid_out        : std_logic                    := '0';
   signal slv_data_out        : std_logic_vector(7 downto 0) := (others => '0');
   signal slv_last_pixel_data : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_rdy              : std_logic := '0';
+  signal sl_rdy              : std_logic                    := '0';
 
   type t_states is (IDLE, SEND_FILTER_TYPE, APPLY_FILTER, DELAY);
 
@@ -54,11 +54,13 @@ begin
       case state is
 
         when IDLE =>
+
           if (isl_start = '1') then
             state <= SEND_FILTER_TYPE;
           end if;
 
         when SEND_FILTER_TYPE =>
+
           if (isl_get = '1') then
             sl_valid_out <= '1';
             slv_data_out <= std_logic_vector(to_unsigned(C_ROW_FILTER_TYPE, 8));
@@ -69,6 +71,7 @@ begin
           end if;
 
         when APPLY_FILTER =>
+
           sl_rdy <= '1';
 
           if (C_ROW_FILTER_TYPE = 0) then
@@ -81,7 +84,8 @@ begin
               slv_last_pixel_data <= islv_data;
             end if;
           else
-            report "Row filter type " & to_string(C_ROW_FILTER_TYPE) & " not yet implemented." severity error;
+            report "Row filter type " & to_string(C_ROW_FILTER_TYPE) & " not yet implemented."
+              severity error;
           end if;
 
           if (isl_valid = '1') then
@@ -109,6 +113,7 @@ begin
           end if;
 
         when DELAY =>
+
           state <= SEND_FILTER_TYPE;
 
       end case;

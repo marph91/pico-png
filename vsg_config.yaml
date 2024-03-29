@@ -3,7 +3,7 @@ file_list:
   - src/util/*.vhd
 rule:
   global:
-    indentSize: 2
+    indent_size: 2
   constant_004: # names
     case: upper
   constant_015: # prefix
@@ -35,3 +35,5 @@ rule:
     disable: false
   type_015: # prefix
     disable: false
+  type_500: # names
+    case: upper

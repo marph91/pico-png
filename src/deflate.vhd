@@ -28,10 +28,10 @@ end entity deflate;
 
 architecture behavioral of deflate is
 
-  signal sl_valid_out_lzss : std_logic := '0';
+  signal sl_valid_out_lzss : std_logic                                                                                                                         := '0';
   signal slv_data_out_lzss : std_logic_vector(calc_huffman_bitwidth(C_BTYPE, C_INPUT_BUFFER_SIZE, C_SEARCH_BUFFER_SIZE, C_MAX_MATCH_LENGTH_USER) - 1 downto 0) := (others => '0');
-  signal sl_finish_lzss    : std_logic := '0';
-  signal sl_valid_out      : std_logic := '0';
+  signal sl_finish_lzss    : std_logic                                                                                                                         := '0';
+  signal sl_valid_out      : std_logic                                                                                                                         := '0';
 
 begin
 

@@ -71,13 +71,13 @@ architecture behavioral of png_encoder is
   -- 2 bit: compression method (ONLY deflate/inflate compression with a 32K sliding window)
   -- 2 bit: filter method (ONLY adaptive filtering with five basic filter types)
   -- 2 bit: interlace method (0: no interlace, 1: Adam7 interlace)
-  constant C_IHDR_DATA : std_logic_vector(13 * 8 - 1 downto 0) := std_logic_vector(to_unsigned(C_IMG_WIDTH, 32)) &
-                                                                  std_logic_vector(to_unsigned(C_IMG_HEIGHT, 32)) &
-                                                                  std_logic_vector(to_unsigned(C_IMG_BIT_DEPTH, 8)) &
-                                                                  std_logic_vector(to_unsigned(C_COLOR_TYPE, 8)) &
-                                                                  x"00" &
-                                                                  x"00" &
-                                                                  x"00";
+  constant C_IHDR_DATA : std_logic_vector(13 * 8 - 1 downto 0)        := std_logic_vector(to_unsigned(C_IMG_WIDTH, 32)) &
+                                                                         std_logic_vector(to_unsigned(C_IMG_HEIGHT, 32)) &
+                                                                         std_logic_vector(to_unsigned(C_IMG_BIT_DEPTH, 8)) &
+                                                                         std_logic_vector(to_unsigned(C_COLOR_TYPE, 8)) &
+                                                                         x"00" &
+                                                                         x"00" &
+                                                                         x"00";
   constant C_IHDR      : std_logic_vector((13 + 12) * 8 - 1 downto 0) := generate_chunk(C_IHDR_TYPE, C_IHDR_DATA);
 
   -- constant C_PLTE
@@ -90,37 +90,37 @@ architecture behavioral of png_encoder is
 
   signal slv_full_header : std_logic_vector(44 * 8 - 1 downto 0) := (others => '0');
 
-  constant C_IEND_TYPE : std_logic_vector(4 * 8 - 1 downto 0) := x"49454e44"; -- IEND string encoded
+  constant C_IEND_TYPE : std_logic_vector(4 * 8 - 1 downto 0)  := x"49454e44"; -- IEND string encoded
   constant C_IEND      : std_logic_vector(12 * 8 - 1 downto 0) := generate_chunk(C_IEND_TYPE, "");
 
   constant C_IMG_DEPTH : integer range 1 to 4 := get_img_depth(C_COLOR_TYPE);
 
   -- row_filter
-  signal sl_start_row_filter     : std_logic := '0';
-  signal sl_valid_out_row_filter : std_logic := '0';
+  signal sl_start_row_filter     : std_logic                    := '0';
+  signal sl_valid_out_row_filter : std_logic                    := '0';
   signal slv_data_out_row_filter : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_rdy_row_filter       : std_logic := '0';
+  signal sl_rdy_row_filter       : std_logic                    := '0';
 
   -- zlib
-  signal sl_valid_in_zlib  : std_logic := '0';
+  signal sl_valid_in_zlib  : std_logic                    := '0';
   signal slv_data_in_zlib  : std_logic_vector(7 downto 0) := (others => '0');
   signal slv_data_out_zlib : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_valid_out_zlib : std_logic := '0';
-  signal sl_start_zlib     : std_logic := '0';
-  signal sl_finish_zlib    : std_logic := '0';
+  signal sl_valid_out_zlib : std_logic                    := '0';
+  signal sl_start_zlib     : std_logic                    := '0';
+  signal sl_finish_zlib    : std_logic                    := '0';
 
   -- idat chunk
-  signal sl_valid_in_crc32  : std_logic := '0';
-  signal slv_data_in_crc32  : std_logic_vector(7 downto 0) := (others => '0');
+  signal sl_valid_in_crc32  : std_logic                            := '0';
+  signal slv_data_in_crc32  : std_logic_vector(7 downto 0)         := (others => '0');
   signal slv_data_out_crc32 : std_logic_vector(4 * 8 - 1 downto 0) := (others => '0');
   -- TODO: ghdl bug: 2 ** 31 - 1 = 2147483647
-  signal int_idat_length    : integer range 0 to 2147483647 := 0;
+  signal int_idat_length : integer range 0 to 2147483647 := 0;
 
   -- interface
-  signal sl_valid_out : std_logic := '0';
+  signal sl_valid_out : std_logic                    := '0';
   signal slv_data_out : std_logic_vector(7 downto 0) := (others => '0');
-  signal sl_finish    : std_logic := '0';
-  signal sl_flush     : std_logic := '0';
+  signal sl_finish    : std_logic                    := '0';
+  signal sl_flush     : std_logic                    := '0';
 
   -- internal
 
@@ -128,9 +128,9 @@ architecture behavioral of png_encoder is
 
   signal state : t_states;
 
-  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1 := 0;
+  signal int_channel_cnt : integer range 0 to C_IMG_DEPTH - 1                := 0;
   signal int_pixel_cnt   : integer range 0 to C_IMG_WIDTH * C_IMG_HEIGHT - 1 := 0;
-  signal int_index       : integer range 0 to slv_full_header'length / 8 := 0;
+  signal int_index       : integer range 0 to slv_full_header'length / 8     := 0;
 
 begin
 
@@ -199,12 +199,14 @@ begin
       case state is
 
         when IDLE =>
+
           if (isl_start = '1') then
             state     <= INIT_IDAT_CRC32;
             int_index <= 4;
           end if;
 
         when INIT_IDAT_CRC32 =>
+
           if (int_index /= 0) then
             sl_valid_in_crc32 <= '1';
             slv_data_in_crc32 <= get_byte(C_IDAT_TYPE, int_index);
@@ -215,10 +217,12 @@ begin
           end if;
 
         when INIT_ROW_FILTER =>
+
           sl_start_row_filter <= '1';
           state               <= ZLIB;
 
         when ZLIB =>
+
           sl_valid_in_zlib  <= sl_valid_out_row_filter;
           slv_data_in_zlib  <= slv_data_out_row_filter;
           sl_valid_in_crc32 <= sl_valid_out_zlib;
@@ -232,6 +236,7 @@ begin
           end if;
 
         when IDAT_CRC =>
+
           if (int_index /= 0) then
             int_index    <= int_index - 1;
             slv_data_out <= get_byte(slv_data_out_crc32, int_index);
@@ -242,6 +247,7 @@ begin
           end if;
 
         when IEND =>
+
           if (int_index /= 0) then
             slv_data_out <= get_byte(C_IEND, int_index);
             sl_valid_out <= '1';
@@ -254,6 +260,7 @@ begin
           end if;
 
         when HEADERS =>
+
           -- send headers last, because length of idat is needed,
           -- which can be obtained only after all data got received
           if (int_index /= 0) then

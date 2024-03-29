@@ -26,9 +26,9 @@ end entity huffman;
 
 architecture behavioral of huffman is
 
-  signal isl_valid_d1 : std_logic := '0';
+  signal isl_valid_d1 : std_logic                         := '0';
   signal islv_data_d1 : std_logic_vector(islv_data'range) := (others => '0');
-  signal sl_valid_out : std_logic := '0';
+  signal sl_valid_out : std_logic                         := '0';
   signal slv_data_out : std_logic_vector(oslv_data'range) := (others => '0');
 
   signal sl_finish               : std_logic := '0';
@@ -46,7 +46,7 @@ architecture behavioral of huffman is
     slv_data_in   : std_logic_vector(12 downto 0);
     int_bits      : integer range 1 to 13;
     sl_descending : std_logic;
-  end record;
+  end record t_aggregator;
 
   signal aggregator : t_aggregator := ('0', (others => '0'), 1, '0');
 
@@ -56,7 +56,7 @@ architecture behavioral of huffman is
   type t_buffer32 is record
     int_current_index : integer range 0 to 31;
     slv_data          : std_logic_vector(31 downto 0);
-  end record;
+  end record t_buffer32;
 
   signal buffer32 : t_buffer32 := (0, (others => '0'));
 
@@ -73,7 +73,7 @@ begin
     variable v_huffman_code : t_huffman_code;
 
     variable v_int_match_length,
-             v_int_match_distance : integer;
+            v_int_match_distance : integer;
 
     variable v_int_buffer_index_tmp : integer range 0 to 7;
 
@@ -97,6 +97,7 @@ begin
       case state is
 
         when IDLE =>
+
           -- send everything in one block
           -- TODO: revisit all the reverting
           aggregator.sl_valid_in <= '1';
@@ -108,27 +109,28 @@ begin
           state <= WAIT_FOR_INPUT;
 
         when WAIT_FOR_INPUT =>
+
           if (isl_valid = '1') then
-            if (islv_data(islv_data'HIGH) = '0') then
+            if (islv_data(islv_data'high) = '0') then
               -- no match = literal/raw data
-              state <= LITERAL_CODE;
+              state                   <= LITERAL_CODE;
               v_huffman_code.sl_match := '0';
             else
               -- match, following states:
               -- LENGTH_CODE -> EXTRA_LENGTH_CODE -> DISTANCE_CODE -> EXTRA_DISTANCE_CODE
-              state <= LENGTH_CODE;
+              state                   <= LENGTH_CODE;
               v_huffman_code.sl_match := '1';
             end if;
             slv_current_value <= islv_data;
           elsif (isl_valid_d1 = '1') then
-            if (islv_data_d1(islv_data_d1'HIGH) = '0') then
+            if (islv_data_d1(islv_data_d1'high) = '0') then
               -- no match = literal/raw data
-              state <= LITERAL_CODE;
+              state                   <= LITERAL_CODE;
               v_huffman_code.sl_match := '0';
             else
               -- match, following states:
               -- LENGTH_CODE -> EXTRA_LENGTH_CODE -> DISTANCE_CODE -> EXTRA_DISTANCE_CODE
-              state <= LENGTH_CODE;
+              state                   <= LENGTH_CODE;
               v_huffman_code.sl_match := '1';
             end if;
             slv_current_value <= islv_data_d1;
@@ -138,13 +140,14 @@ begin
           end if;
 
         when LITERAL_CODE =>
-          v_huffman_code.lit := get_literal_code(to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto islv_data'HIGH - 8))));
+
+          v_huffman_code.lit := get_literal_code(to_integer(unsigned(slv_current_value(islv_data'high - 1 downto islv_data'high - 8))));
 
           report "LITERAL_CODE " &
-            to_string(buffer32.int_current_index) & " " &
-            to_string(to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto islv_data'HIGH - 8)))) & " " &
-            to_string(v_huffman_code.lit.value) & " " &
-            to_string(v_huffman_code.lit.bits);
+                 to_string(buffer32.int_current_index) & " " &
+                 to_string(to_integer(unsigned(slv_current_value(islv_data'high - 1 downto islv_data'high - 8)))) & " " &
+                 to_string(v_huffman_code.lit.value) & " " &
+                 to_string(v_huffman_code.lit.bits);
 
           aggregator.sl_valid_in <= '1';
           aggregator.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.lit.value, 13));
@@ -153,14 +156,15 @@ begin
           state <= WAIT_FOR_INPUT;
 
         when LENGTH_CODE =>
+
           v_int_match_length    := to_integer(unsigned(slv_current_value(C_MATCH_LENGTH_BITS - 1 downto 0)));
           v_huffman_code.length := get_length_code(v_int_match_length);
 
           report "LENGTH_CODE " &
-            to_string(buffer32.int_current_index) & " " &
-            to_string(v_int_match_length) & " " &
-            to_string(v_huffman_code.length.value) & " " &
-            to_string(v_huffman_code.length.bits);
+                 to_string(buffer32.int_current_index) & " " &
+                 to_string(v_int_match_length) & " " &
+                 to_string(v_huffman_code.length.value) & " " &
+                 to_string(v_huffman_code.length.bits);
 
           aggregator.sl_valid_in <= '1';
           aggregator.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.length.value, 13));
@@ -169,13 +173,14 @@ begin
           state <= EXTRA_LENGTH_CODE;
 
         when EXTRA_LENGTH_CODE =>
+
           v_huffman_code.length_extra := get_length_extra_code(v_int_match_length);
 
           report "EXTRA_LENGTH_CODE " &
-            to_string(buffer32.int_current_index) & " " &
-            to_string(v_int_match_length) & " " &
-            to_string(v_huffman_code.length_extra.value) & " " &
-            to_string(v_huffman_code.length_extra.bits);
+                 to_string(buffer32.int_current_index) & " " &
+                 to_string(v_int_match_length) & " " &
+                 to_string(v_huffman_code.length_extra.value) & " " &
+                 to_string(v_huffman_code.length_extra.bits);
 
           if (v_huffman_code.length_extra.bits /= 0) then
             aggregator.sl_valid_in   <= '1';
@@ -187,14 +192,15 @@ begin
           state <= DISTANCE_CODE;
 
         when DISTANCE_CODE =>
-          v_int_match_distance    := to_integer(unsigned(slv_current_value(islv_data'HIGH - 1 downto C_MATCH_LENGTH_BITS)));
+
+          v_int_match_distance    := to_integer(unsigned(slv_current_value(islv_data'high - 1 downto C_MATCH_LENGTH_BITS)));
           v_huffman_code.distance := get_distance_code(v_int_match_distance);
 
           report "DISTANCE_CODE " &
-            to_string(buffer32.int_current_index) & " " &
-            to_string(v_int_match_distance) & " " &
-            to_string(v_huffman_code.distance.value) & " " &
-            to_string(v_huffman_code.distance.bits);
+                 to_string(buffer32.int_current_index) & " " &
+                 to_string(v_int_match_distance) & " " &
+                 to_string(v_huffman_code.distance.value) & " " &
+                 to_string(v_huffman_code.distance.bits);
 
           aggregator.sl_valid_in <= '1';
           aggregator.slv_data_in <= std_logic_vector(to_unsigned(v_huffman_code.distance.value, 13));
@@ -203,13 +209,14 @@ begin
           state <= EXTRA_DISTANCE_CODE;
 
         when EXTRA_DISTANCE_CODE =>
+
           v_huffman_code.distance_extra := get_distance_extra_code(v_int_match_distance);
 
           report "EXTRA_DISTANCE_CODE " &
-            to_string(buffer32.int_current_index) & " " &
-            to_string(v_int_match_distance) & " " &
-            to_string(v_huffman_code.distance_extra.value) & " " &
-            to_string(v_huffman_code.distance_extra.bits);
+                 to_string(buffer32.int_current_index) & " " &
+                 to_string(v_int_match_distance) & " " &
+                 to_string(v_huffman_code.distance_extra.value) & " " &
+                 to_string(v_huffman_code.distance_extra.bits);
 
           if (v_huffman_code.distance_extra.bits /= 0) then
             aggregator.sl_valid_in   <= '1';
@@ -221,6 +228,7 @@ begin
           state <= WAIT_FOR_INPUT;
 
         when EOB =>
+
           -- append end of block -> eob is 7 bit zeros (256) -> zeros get appended anyway
           aggregator.sl_valid_in <= '1';
           aggregator.slv_data_in <= std_logic_vector(to_unsigned(0, 13));
@@ -229,6 +237,7 @@ begin
           state <= PAD;
 
         when PAD =>
+
           -- Current index of the buffer needs to be updated manually, since it
           -- gets the desired value only at the next cycle.
           v_int_buffer_index_tmp := (buffer32.int_current_index + 7) mod 8;
@@ -242,6 +251,7 @@ begin
           state <= SEND_BYTES_FINAL;
 
         when SEND_BYTES_FINAL =>
+
           if (sl_aggregation_finished = '1') then
             sl_finish <= '1';
             state     <= IDLE;
@@ -270,9 +280,9 @@ begin
       -- Output of aggregator.
       v_int_current_index := buffer32.int_current_index;
       if (v_int_current_index >= 8) then
-        sl_valid_out <= '1';
+        sl_valid_out        <= '1';
         v_slv_data_out      := buffer32.slv_data(v_int_current_index - 1 downto v_int_current_index - 8);
-        slv_data_out <= revert_vector(v_slv_data_out);
+        slv_data_out        <= revert_vector(v_slv_data_out);
         v_int_current_index := v_int_current_index - 8;
       elsif (state = SEND_BYTES_FINAL) then
         sl_aggregation_finished <= '1';
@@ -283,22 +293,27 @@ begin
         v_int_current_index := v_int_current_index + aggregator.int_bits;
 
         -- shift the whole buffer
-        for pos in buffer32.slv_data'RANGE loop
-          buffer32.slv_data(pos) <= buffer32.slv_data((pos - aggregator.int_bits) mod buffer32.slv_data'LENGTH);
+        for pos in buffer32.slv_data'range loop
+
+          buffer32.slv_data(pos) <= buffer32.slv_data((pos - aggregator.int_bits) mod buffer32.slv_data'length);
+
         end loop;
 
         -- insert new values, maximum 13 (aggregator.int_bits)
         for pos in 0 to 12 loop
+
           exit when pos = aggregator.int_bits;
 
           if (aggregator.sl_descending = '1') then
             buffer32.slv_data(pos) <= aggregator.slv_data_in(pos);
           else
             -- After reverting the bits, the important bits are at the other end of the slv.
-            -- I. e. starting at aggregator.slv_data_in'HIGH, not 0.
-            buffer32.slv_data(pos) <= aggregator.slv_data_in(aggregator.slv_data_in'HIGH - aggregator.int_bits + pos + 1);
+            -- I. e. starting at aggregator.slv_data_in'high, not 0.
+            buffer32.slv_data(pos) <= aggregator.slv_data_in(aggregator.slv_data_in'high - aggregator.int_bits + pos + 1);
           end if;
+
         end loop;
+
       end if;
 
       buffer32.int_current_index <= v_int_current_index;

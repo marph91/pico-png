@@ -8,4 +8,6 @@ notes.txt
 test_scripts
 vivado
 vunit_out
+*.bmp
+*.png
 *.gtkw

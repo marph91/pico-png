@@ -7,7 +7,7 @@ package huffman_pkg is
   type t_code is record
     bits  : integer;
     value : integer;
-  end record;
+  end record t_code;
 
   type t_huffman_code is record
     sl_match       : std_logic;
@@ -16,34 +16,57 @@ package huffman_pkg is
     length_extra   : t_code;
     distance       : t_code;
     distance_extra : t_code;
-  end record;
+  end record t_huffman_code;
 
-  procedure assert_huffman_code_valid (huffman_code : t_huffman_code);
+  procedure assert_huffman_code_valid (
+    huffman_code : t_huffman_code
+  );
 
-  function get_literal_code (raw_value : integer) return t_code;
+  function get_literal_code (
+    raw_value : integer
+  ) return t_code;
 
-  function get_length_code (raw_value : integer) return t_code;
+  function get_length_code (
+    raw_value : integer
+  ) return t_code;
 
-  function get_length_extra_code (raw_value : integer) return t_code;
+  function get_length_extra_code (
+    raw_value : integer
+  ) return t_code;
 
-  function get_distance_code (raw_value : integer) return t_code;
+  function get_distance_code (
+    raw_value : integer
+  ) return t_code;
 
-  function get_distance_extra_code (raw_value : integer) return t_code;
+  function get_distance_extra_code (
+    raw_value : integer
+  ) return t_code;
 
 end package huffman_pkg;
 
 package body huffman_pkg is
 
   -- Assert a integer value is in a specific range.
-  procedure assert_in_range (name : string; minimum : integer; maximum : integer; value : integer) is
+
+  procedure assert_in_range (
+    name    : string;
+    minimum : integer;
+    maximum : integer;
+    value   : integer
+  ) is
   begin
+
     assert (minimum <= value and value <= maximum)
-      report "invalid " & name & to_string(value);
-  end;
+      report "invalid " & name & " " & to_string(value);
+
+  end procedure;
 
   -- Assert a huffman code is valid.
   -- For details, see RFC1951 3.2.5. Compressed blocks (length and distance codes)
-  procedure assert_huffman_code_valid (huffman_code : t_huffman_code) is
+
+  procedure assert_huffman_code_valid (
+    huffman_code : t_huffman_code
+  ) is
   begin
 
     if (huffman_code.sl_match = '0') then
@@ -63,10 +86,14 @@ package body huffman_pkg is
       assert_in_range("distance extra value", 0, 2 ** 13 - 1, huffman_code.distance.value);
     end if;
 
-  end;
+  end procedure;
 
-  function get_literal_code (raw_value : integer) return t_code is
+  function get_literal_code (
+    raw_value : integer
+  ) return t_code is
+
     variable v_code : t_code;
+
   begin
 
     if (raw_value <= 143) then
@@ -76,10 +103,15 @@ package body huffman_pkg is
     end if;
 
     return v_code;
-  end;
 
-  function get_length_code (raw_value : integer) return t_code is
+  end function;
+
+  function get_length_code (
+    raw_value : integer
+  ) return t_code is
+
     variable v_code : t_code;
+
   begin
 
     if (raw_value <= 10) then
@@ -127,7 +159,8 @@ package body huffman_pkg is
     elsif (raw_value = 258) then
       v_code.value := 285;
     else
-      report "invalid length" & to_string(raw_value) severity error;
+      report "invalid length " & to_string(raw_value)
+        severity error;
     end if;
 
     if (raw_value <= 114) then
@@ -137,11 +170,16 @@ package body huffman_pkg is
     end if;
 
     return v_code;
-  end;
 
-  function get_length_extra_code (raw_value : integer) return t_code is
+  end function;
+
+  function get_length_extra_code (
+    raw_value : integer
+  ) return t_code is
+
     variable v_code            : t_code;
     variable v_int_start_value : integer;
+
   begin
 
     if (raw_value <= 10 or raw_value = 285) then
@@ -165,15 +203,21 @@ package body huffman_pkg is
       v_code.bits       := 5;
       v_int_start_value := 131;
     else
-      report "invalid length" & to_string(raw_value) severity error;
+      report "invalid length " & to_string(raw_value)
+        severity error;
     end if;
 
     v_code.value := raw_value - v_int_start_value;
     return v_code;
-  end;
 
-  function get_distance_code (raw_value : integer) return t_code is
+  end function;
+
+  function get_distance_code (
+    raw_value : integer
+  ) return t_code is
+
     variable v_code : t_code;
+
   begin
 
     if (raw_value <= 4) then
@@ -231,16 +275,22 @@ package body huffman_pkg is
     elsif (raw_value <= 32768) then
       v_code.value := 29;
     else
-      report "invalid distance" & to_string(raw_value) severity error;
+      report "invalid distance " & to_string(raw_value)
+        severity error;
     end if;
 
     v_code.bits := 5;
     return v_code;
-  end;
 
-  function get_distance_extra_code (raw_value : integer) return t_code is
+  end function;
+
+  function get_distance_extra_code (
+    raw_value : integer
+  ) return t_code is
+
     variable v_code            : t_code;
     variable v_int_start_value : integer;
+
   begin
 
     if (raw_value <= 4) then
@@ -289,11 +339,13 @@ package body huffman_pkg is
       v_code.bits       := 13;
       v_int_start_value := 16384;
     else
-      report "invalid distance" & to_string(raw_value) severity error;
+      report "invalid distance " & to_string(raw_value)
+        severity error;
     end if;
 
     v_code.value := raw_value - v_int_start_value;
     return v_code;
-  end;
 
-end huffman_pkg;
+  end function;
+
+end package body huffman_pkg;

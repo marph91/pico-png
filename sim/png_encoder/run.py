@@ -61,9 +61,26 @@ def assemble_and_check_png(root, case):
         outfile.write(png_bytes)
 
     # verify the image data with pillow
-    png_img = Image.open(io.BytesIO(png_bytes))
-    png_img.verify()
+    with Image.open(io.BytesIO(png_bytes)) as png_img:
+        # verify() closes the file
+        # https://stackoverflow.com/a/77483484/7410886
+        # png_img.verify()
 
+        # https://pillow.readthedocs.io/en/latest/reference/Image.html#PIL.Image.Image.size
+        assert png_img.size == (case.width, case.height)
+
+        # flatten the value list if needed:
+        # https://pillow.readthedocs.io/en/latest/handbook/concepts.html#modes
+        if png_img.mode == "L":
+            png_img_data = list(png_img.getdata())
+        else:
+            png_img_data = list(itertools.chain(*png_img.getdata()))
+        print("input data:", case.data_in)
+        print("reconstructed data:", png_img_data)
+        return case.data_in == png_img_data
+
+    # This is the old verification code. Only useful for debugging.
+    # There is a bug at the row filter.
     # verify the IDAT data with zlib
     idat_index = png_bytes.index(b"IDAT")
     idat_length = int.from_bytes(png_bytes[idat_index - 4:idat_index], "big")

@@ -13,6 +13,12 @@
 
 For details about the configuration, see [here](doc/toplevel_interface.md).
 
+## Limitations
+
+- Fixed huffman tables only
+- Small input and search buffers (LZSS)
+- Only the first match is considered (LZSS)
+
 ## Architecture overview
 
 ![architecture_overview](doc/images/overview.svg)
@@ -52,8 +58,8 @@ The image of `pico-png` is a simulation output from `pico-png/sim/png_encoder/ge
 |:-|:-:|:-:|
 |Image size|800x480 pixel|800x480 pixel|
 |Image depth|24-bit RGB|24-bit RGB|
-|Raw image size (kbyte)|1125|1125|
-|Encoded image size (kbyte)|2.4|167.6|
+|Raw image size (kbyte)|1152|1152|
+|Encoded image size (kbyte)|2.4|282.8|
 
 The encoded image size of imagemagick is much smaller than `pico-png`. This is as expected, because `pico-png` uses only a small window size of 12 values. Imagemagick uses most likely the default window size of 32k values. However, the table shows that a reduced image size is achieved in both cases.
 

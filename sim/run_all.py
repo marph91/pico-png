@@ -50,5 +50,6 @@ if __name__ == "__main__":
                                                resource.RLIM_INFINITY))
 
     PRJ = VUnit.from_argv()
+    PRJ.add_vhdl_builtins()
     create_test_suites(PRJ)
     PRJ.main()
